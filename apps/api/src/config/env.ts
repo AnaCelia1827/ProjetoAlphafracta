@@ -1,10 +1,10 @@
-import { MongoClient } from 'mongodb';
+import { ConnectionString } from 'mongodb-connection-string-url';
 import { z } from 'zod';
 
 const mongodbUri = z.string().refine(
   (value) => {
     try {
-      new MongoClient(value);
+      new ConnectionString(value);
       return true;
     } catch {
       return false;
