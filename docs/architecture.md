@@ -4,7 +4,8 @@
 
 Entregar um MVP isolado para a aba **Fees** da Alphractal. O painel deve
 transformar sinais ao vivo da mempool Ethereum em uma única recomendação de
-taxa, exibir sua equivalência em USD e manter um histórico consultável.
+taxa em Gwei, exibir a cotação ETH/USD usada como contexto e manter um histórico
+consultável.
 
 O sistema é somente de leitura. Ele não assina, envia ou automatiza transações
 on-chain.
@@ -14,46 +15,59 @@ on-chain.
 | Área | Decisão |
 | --- | --- |
 | Frontend | Next.js com TypeScript |
-| Backend | NestJS sobre Node.js e TypeScript |
+| Backend | Express sobre Node.js e TypeScript |
 | Dados Ethereum | Alchemy RPC, com `viem` para consultas e tipos Ethereum |
 | Mempool | WebSocket `alchemy_pendingTransactions` da Alchemy |
 | Cotação | WebSocket público da Coinbase, produto `ETH-USD` |
 | Atualização da tela | Server-Sent Events (SSE) do backend para o frontend |
 | Persistência | MongoDB, com coleção de séries temporais para snapshots |
-| Organização | Monólito modular; não usar fila, Redis ou microsserviços no MVP |
+| Organização | Monólito modular com DDD leve; não usar fila, Redis ou microsserviços no MVP |
 
-Essa escolha acompanha a base tecnológica atual da Alphractal (Next.js e
-NestJS), preservando uma separação explícita entre interface e ingestão de
-dados sem introduzir infraestrutura que o MVP ainda não exige.
+Express mantém o backend enxuto e explícito para este protótipo independente.
+O DDD leve preserva as regras de estimativa fora de Express, Alchemy e MongoDB,
+sem introduzir padrões complexos que o MVP ainda não exige.
 
 ## Estrutura proposta
 
 ```text
 apps/
   web/                 # Next.js: painel Fees
-  api/                 # NestJS: ingestão, cálculo, SSE e API
+  api/                 # Express: ingestão, cálculo, SSE e API
+    src/
+      domain/fees/      # regras puras de estimativa e suas interfaces
+      application/fees/ # casos de uso
+      infrastructure/   # Alchemy, Coinbase e MongoDB
+      interfaces/       # rotas, controllers Express e SSE
+      config/           # validação das variáveis de ambiente
 packages/
-  domain/              # tipos e fórmulas compartilhados
+  contracts/           # DTOs compartilhados entre API e frontend
 docs/
   architecture.md
 ```
 
-Os módulos internos de `apps/api` terão responsabilidades únicas:
+## DDD leve
 
-| Módulo | Responsabilidade |
+O contexto de domínio único do MVP é `fee-monitoring`: ele responde qual taxa
+única deve ser recomendada naquele instante. As responsabilidades ficam
+separadas por camada:
+
+| Camada | Responsabilidade |
 | --- | --- |
-| `mempool` | Conectar à Alchemy, receber e normalizar transações pendentes. |
-| `ethereum` | Consultar blocos e `eth_feeHistory` usando `viem`. |
-| `pricing` | Manter a última cotação ETH/USD e seu horário de atualização. |
-| `estimator` | Produzir a recomendação única de taxa a partir dos sinais recebidos. |
-| `stream` | Expor o snapshot atual via SSE. |
-| `persistence` | Persistir snapshots e dados de blocos no MongoDB. |
+| `domain/fees` | Valores de domínio, como Gwei e recomendação de taxa, e a regra pura de estimativa. Não importa Express, `viem`, MongoDB ou variáveis de ambiente. |
+| `application/fees` | Casos de uso que coordenam a atualização, consulta e publicação de um snapshot. |
+| `infrastructure` | Adaptadores concretos para Alchemy, Coinbase e MongoDB. |
+| `interfaces` | Rotas, controllers Express e hub SSE que traduzem HTTP em chamadas da aplicação. |
+
+O domínio define portas, como `SnapshotRepository` e
+`LiveSnapshotPublisher`. Em `server.ts`, o *composition root* conecta essas
+portas às implementações concretas `MongoSnapshotRepository` e `SseHub`.
+Assim, a regra de cálculo não muda se um provedor ou banco for substituído.
 
 ## Fluxo de dados
 
 ```text
 Alchemy WSS ──┐
-              ├─> API NestJS ─> estimador em memória ─> SSE ─> Next.js
+              ├─> API Express ─> estimador em memória ─> SSE ─> Next.js
 Coinbase WSS ─┘                   │
                                   └─> MongoDB
 ```
@@ -63,8 +77,8 @@ Coinbase WSS ─┘                   │
    memória, por exemplo, dos últimos 30 segundos.
 3. A cada intervalo curto, o estimador combina a amostra, a `baseFee` do bloco
    atual e dados de `eth_feeHistory` para gerar uma única taxa recomendada.
-4. A cotação ETH/USD mais recente da Coinbase converte os valores monetários e
-   tem o próprio horário de atualização registrado.
+4. A cotação ETH/USD mais recente da Coinbase é associada ao snapshot e tem seu
+   próprio horário de atualização registrado.
 5. O backend publica um snapshot pronto aos clientes conectados por SSE e grava
    o histórico em intervalos controlados, por exemplo a cada cinco segundos e
    na chegada de um bloco.
@@ -127,9 +141,9 @@ o snapshot ao vivo; a persistência é marcada como degradada e tenta reconectar
 - A chave da Alchemy fica somente nas variáveis de ambiente do backend.
 - O primeiro MVP não inclui segundo RPC, fallback de cotação, Redis, fila,
   microsserviços, deploy de produção, envio de transações ou auditoria formal.
-- A escolha de um limite de gás para converter a taxa em custo total de uma
-  operação ainda é uma decisão de produto; esta arquitetura registra a taxa em
-  Gwei e a cotação ETH/USD sem assumir um tipo de transação.
+- O painel exibe a taxa recomendada em Gwei e a cotação ETH/USD. Ele não estima
+  o custo total de uma operação: isso exigiria definir o gas usado por uma
+  transferência ou contrato específico, o que está fora do MVP.
 
 ## Referências técnicas
 
