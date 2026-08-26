@@ -1,12 +1,8 @@
-import { config as loadEnvironment } from 'dotenv';
-import { fileURLToPath } from 'node:url';
-
 import { createApp } from './app.js';
 import { loadConfig } from './config/env.js';
+import { loadRootEnvironment } from './config/root-env.js';
 
-const rootEnvPath = fileURLToPath(new URL('../../../.env', import.meta.url));
-
-loadEnvironment({ path: rootEnvPath });
+loadRootEnvironment();
 
 const config = loadConfig(process.env);
 const app = createApp();

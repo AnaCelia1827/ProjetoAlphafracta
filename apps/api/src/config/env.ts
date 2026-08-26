@@ -1,15 +1,17 @@
+import { MongoClient } from 'mongodb';
 import { z } from 'zod';
 
-const mongodbUri = z
-  .string()
-  .url()
-  .refine(
-    (value) => {
-      const { protocol } = new URL(value);
-      return protocol === 'mongodb:' || protocol === 'mongodb+srv:';
-    },
-    { message: 'MONGODB_URI must use the mongodb:// or mongodb+srv:// scheme' },
-  );
+const mongodbUri = z.string().refine(
+  (value) => {
+    try {
+      new MongoClient(value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: 'MONGODB_URI must use the mongodb:// or mongodb+srv:// scheme' },
+);
 
 const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
