@@ -1,19 +1,20 @@
 services:
   mongo:
     image: mongo:8
-    container_name: alphractal-mongo
     restart: unless-stopped
-    env_file: .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-alphractal}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-alphractal_dev_password}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-alphractal}
     ports:
-      - '27017:27017'
+      - '127.0.0.1:27017:27017'
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'mongosh --quiet --username alphractal --password alphractal_dev_password --authenticationDatabase admin --eval "db.adminCommand(\"ping\").ok" | grep 1',
-        ]
+      test: >-
+        mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME"
+        --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin
+        --eval 'db.adminCommand("ping").ok' | grep 1
       interval: 10s
       timeout: 5s
       retries: 5
