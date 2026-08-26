@@ -1,0 +1,19 @@
+services:
+  mongo:
+    image: mongo:8
+    container_name: alphractal-mongo
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD-SHELL', 'mongosh --quiet --username alphractal --password alphractal_dev_password --authenticationDatabase admin --eval "db.adminCommand(\"ping\").ok" | grep 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mongo_data:
