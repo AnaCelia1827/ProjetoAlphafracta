@@ -75,3 +75,13 @@ export function addRationals(left: Rational, right: Rational): Rational {
 export function ceilDivide(numerator: bigint, denominator: bigint): bigint {
   return ceilRational(rational(numerator, denominator));
 }
+
+export function decimalStringToRational(value: string): Rational | null {
+  const match = /^(0|[1-9]\d*)(?:\.(\d+))?$/.exec(value);
+  if (match === null) return null;
+
+  const integer = match[1]!;
+  const fraction = match[2] ?? '';
+  const denominator = 10n ** BigInt(fraction.length);
+  return rational(BigInt(`${integer}${fraction}`), denominator);
+}
