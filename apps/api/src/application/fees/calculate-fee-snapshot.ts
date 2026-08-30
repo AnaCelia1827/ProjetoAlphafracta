@@ -79,22 +79,21 @@ export class CalculateFeeSnapshot {
   constructor(private readonly dependencies: CalculateFeeSnapshotDependencies) {}
 
   async execute(): Promise<FeeSnapshot> {
-    const now = this.dependencies.clock.now();
-    const mempoolUpdatedAt = this.dependencies.mempoolSource.updatedAt() ?? undefined;
-    const pendingBids = this.dependencies.mempoolSource.getPendingBids(
-      new Date(now.getTime() - MEMPOOL_WINDOW_MS),
-    );
-
     let evidence;
     try {
       evidence = await this.dependencies.ethereumFeeSource.getFeeEvidence();
     } catch (error) {
       if (error instanceof EthereumProviderUnavailableError) {
-        return this.publishLastKnown(now);
+        return this.publishLastKnown(this.dependencies.clock.now());
       }
       throw error;
     }
 
+    const now = this.dependencies.clock.now();
+    const mempoolUpdatedAt = this.dependencies.mempoolSource.updatedAt() ?? undefined;
+    const pendingBids = this.dependencies.mempoolSource.getPendingBids(
+      new Date(now.getTime() - MEMPOOL_WINDOW_MS),
+    );
     const estimate = estimateFees({ evidence, pendingBids, now });
     if (mempoolUpdatedAt === undefined || estimate === null) {
       return this.publishLastKnown(now);

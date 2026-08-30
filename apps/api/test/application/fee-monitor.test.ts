@@ -24,6 +24,7 @@ function setup() {
   const cache = new FeeSnapshotCache();
   const events: LiveEvent[] = [];
   const bids = [pendingBid(1)];
+  const clock = { now: vi.fn(() => FIXED_NOW) };
   const ethereumFeeSource = {
     getFeeEvidence: vi.fn().mockResolvedValue({
       latestBaseFeeWei: 30_000_000_000n,
@@ -40,7 +41,7 @@ function setup() {
     latestQuote: vi.fn(() => ({ ethUsd: rational(2_000n), updatedAt: FIXED_NOW })),
   };
   const calculate = new CalculateFeeSnapshot({
-    clock: { now: () => FIXED_NOW },
+    clock,
     ethereumFeeSource,
     mempoolSource,
     priceSource,
@@ -53,6 +54,7 @@ function setup() {
     cache,
     events,
     bids,
+    clock,
     ethereumFeeSource,
     mempoolSource,
     priceSource,
@@ -75,6 +77,25 @@ describe('CalculateFeeSnapshot', () => {
     expect(context.repository.inserted).toEqual([result]);
     expect(context.cache.get()).toBe(result);
     expect(context.events).toEqual([{ type: 'fee-snapshot', snapshot: result }]);
+  });
+
+  it('timestamps the snapshot after provider evidence is received', async () => {
+    const context = setup();
+    const completedAt = new Date(FIXED_NOW.getTime() + 200);
+    context.clock.now.mockReturnValueOnce(FIXED_NOW).mockReturnValueOnce(completedAt);
+    context.ethereumFeeSource.getFeeEvidence.mockImplementation(async () => ({
+      latestBaseFeeWei: 30_000_000_000n,
+      projectedNextBaseFeeWei: 30_000_000_000n,
+      historicalRewardP60Wei: [1_000_000_000n],
+      ethereumUpdatedAt: context.clock.now(),
+    }));
+
+    const result = await context.calculate.execute();
+
+    expect(result.timestamp).toEqual(completedAt);
+    expect(result.dataAgeMs).toBe(200);
+    expect(result.status.ethereum).toBe('fresh');
+    expect(result.confidence.level).not.toBe('unavailable');
   });
 
   it('publishes last-known with increasing age and never persists it', async () => {
