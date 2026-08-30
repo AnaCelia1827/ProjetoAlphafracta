@@ -61,3 +61,26 @@ export class BlocksUnavailableError extends ApplicationError {
     super('BLOCKS_UNAVAILABLE', 503, 'Recent blocks are unavailable');
   }
 }
+
+export interface ApplicationErrorDetail {
+  field: string;
+  issue: string;
+}
+
+export class InvalidQueryError extends ApplicationError {
+  constructor(readonly details?: ApplicationErrorDetail[]) {
+    super('INVALID_QUERY', 400, 'The request parameters are invalid');
+  }
+}
+
+export class InvalidTimeRangeError extends ApplicationError {
+  constructor() {
+    super('INVALID_TIME_RANGE', 400, 'The requested time range is invalid');
+  }
+}
+
+export class RouteNotFoundError extends ApplicationError {
+  constructor() {
+    super('ROUTE_NOT_FOUND', 404, 'The requested route was not found');
+  }
+}

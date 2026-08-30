@@ -1,6 +1,7 @@
 import { ObjectId, type Collection, type Filter } from 'mongodb';
 import { z } from 'zod';
 
+import { InvalidQueryError } from '../../application/common/errors.js';
 import { FeeHistoryUnavailableError } from '../../domain/fees/fee-trend.js';
 import type {
   EstimatedTransferCost,
@@ -50,9 +51,9 @@ const CursorSchema = z.object({
 
 type Cursor = z.infer<typeof CursorSchema>;
 
-export class InvalidHistoryCursorError extends Error {
+export class InvalidHistoryCursorError extends InvalidQueryError {
   constructor() {
-    super('The fee history cursor is invalid or does not match the query');
+    super([{ field: 'cursor', issue: 'The cursor is invalid or does not match the query' }]);
     this.name = 'InvalidHistoryCursorError';
   }
 }
