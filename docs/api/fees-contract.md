@@ -1,203 +1,294 @@
-# Contrato da API Fees - v1
+# Contrato da API Live Monitor — v1
 
 ## Status e autoridade
 
-Este documento e a fonte normativa da comunicacao entre `apps/web` e
-`apps/api` para o MVP da aba **Fees**. Ele foi aprovado em 26 de agosto de
-2026 e deriva das decisoes de `docs/architecture.md`.
+Este documento é a fonte normativa da comunicação entre `apps/web` e
+`apps/api` para o MVP do Live Monitor. Esta revisão, de 30 de agosto de 2026,
+substitui o contrato inicial restrito a snapshots de Fees e deriva de
+`docs/architecture.md`.
 
 `packages/contracts` deve implementar este documento com schemas Zod e tipos
-TypeScript inferidos. Em caso de divergencia, este documento deve ser revisto e
-aprovado antes de os schemas ou as aplicacoes serem alterados.
+TypeScript inferidos. Em caso de divergência, este documento deve ser revisado
+antes dos schemas ou das aplicações.
 
 ## Escopo
 
-O contrato cobre somente o monitoramento de taxas da Ethereum Mainnet:
+O contrato cobre somente Ethereum Mainnet:
 
-- consulta do ultimo snapshot calculado;
-- consulta do historico de snapshots para graficos;
-- recebimento de novos snapshots por Server-Sent Events (SSE).
+- consulta do snapshot atual de taxas;
+- histórico de snapshots para o gráfico;
+- consulta dos 20 blocos mais recentes;
+- consulta pontual de bloco pós-EIP-1559 por número ou hash;
+- eventos de taxas e blocos por um único stream SSE.
 
-O sistema e somente de leitura. O contrato nao inclui autenticacao, assinatura
-ou envio de transacoes, conexao do navegador a provedores RPC, deploy de
-contratos, Redis, filas ou microsservicos.
+O sistema é somente de leitura. Não inclui autenticação, assinatura ou envio de
+transações, múltiplas redes, blocos pré-EIP-1559, análise interna de blocos,
+Redis, filas ou microsserviços.
 
-`GET /health` continua sendo um endpoint de infraestrutura e nao faz parte do
-dominio Fees.
+`GET /health` continua sendo um endpoint de infraestrutura e não faz parte do
+domínio do Live Monitor.
 
-## Convencoes
+## Convenções
 
-- Prefixo da API: `/api/v1`.
+- Prefixo REST: `/api/v1`.
 - REST usa `application/json; charset=utf-8`.
-- Datas usam ISO 8601 em UTC, com o sufixo `Z`.
-- Valores de Gwei e USD usam numeros JSON finitos e nao negativos.
-- Campos obrigatorios de `FeeSnapshot` nunca usam `null`. Na paginacao,
-  `nextCursor: null` indica explicitamente que nao existe outra pagina.
-- Respostas REST incluem `X-Request-Id`.
-- Respostas REST usam `Cache-Control: no-store`.
-- O MVP nao possui autenticacao. O backend limita origens pela configuracao de
-  CORS do frontend.
-- Clientes devem ignorar campos desconhecidos para permitir extensoes
-  compativeis dentro da `v1`.
+- Datas usam ISO 8601 em UTC com sufixo `Z`.
+- Gwei, ETH e USD usam números JSON finitos e não negativos.
+- Percentuais de variação podem ser negativos; utilização fica entre 0 e 100.
+- Números de bloco, `gasUsed` e `gasLimit` são strings decimais para não
+  depender dos limites numéricos do JavaScript.
+- Hashes usam strings `0x` com 64 dígitos hexadecimais.
+- Respostas REST incluem `X-Request-Id` e `Cache-Control: no-store`.
+- O MVP não possui autenticação. CORS aceita somente as origens configuradas.
+- Clientes devem ignorar campos desconhecidos.
 
-## Recurso compartilhado: `FeeSnapshot`
+## Recurso `FeeSnapshot`
 
-O mesmo `FeeSnapshot` aparece em `/current`, nos itens de `/history` e no
-evento `fee-snapshot` do stream.
+`FeeSnapshot` representa o estado consolidado do monitor em um instante. O
+mesmo recurso aparece em `/fees/current`, em `/fees/history` e no evento
+`fee-snapshot`.
 
 ```json
 {
-  "timestamp": "2026-08-26T18:42:15.123Z",
+  "timestamp": "2026-08-30T18:42:15.123Z",
   "metadata": {
     "network": "ethereum-mainnet"
   },
-  "recommendedMaxFeeGwei": 18.42,
-  "recommendedPriorityFeeGwei": 1.35,
-  "ethUsd": 4612.83,
-  "sampleSize": 842,
-  "dataAgeMs": 740,
+  "recommendationState": "current",
+  "recommendedMaxFeeGwei": 32.4,
+  "recommendedPriorityFeeGwei": 1.8,
+  "baseFeeGwei": 28.7,
+  "effectiveGasPriceGwei": 30.5,
+  "estimatedTransferCost": {
+    "status": "fresh",
+    "transactionType": "native-eth-transfer",
+    "gasUnits": 21000,
+    "maxCostEth": 0.0006804,
+    "ethUsd": 3420.25,
+    "maxCostUsd": 2.33,
+    "priceUpdatedAt": "2026-08-30T18:42:15.002Z"
+  },
+  "trend24h": {
+    "status": "available",
+    "windowMinutes": 5,
+    "percentChange": 8.4,
+    "currentMedianMaxFeeGwei": 32.1,
+    "previousMedianMaxFeeGwei": 29.61
+  },
+  "confidence": {
+    "level": "high",
+    "reasons": [
+      "fresh-data",
+      "stable-fees",
+      "strong-sample"
+    ]
+  },
+  "sampleSize": 2847,
+  "dataAgeMs": 320,
   "sources": {
     "mempool": "alchemy",
+    "ethereum": "alchemy",
     "price": "coinbase"
   },
   "sourceUpdatedAt": {
-    "mempool": "2026-08-26T18:42:14.810Z",
-    "price": "2026-08-26T18:42:15.002Z"
+    "mempool": "2026-08-30T18:42:14.810Z",
+    "ethereum": "2026-08-30T18:42:13.900Z",
+    "price": "2026-08-30T18:42:15.002Z"
   },
   "status": {
     "mempool": "fresh",
+    "ethereum": "fresh",
     "price": "fresh",
     "persistence": "available"
   }
 }
 ```
 
-### Campos
+### Campos principais
 
-| Campo | Tipo e restricoes | Semantica |
+| Campo | Tipo e restrições | Semântica |
 | --- | --- | --- |
-| `timestamp` | string ISO 8601 UTC | Instante em que o snapshot foi calculado. |
-| `metadata.network` | literal `ethereum-mainnet` | Rede observada pelo MVP. |
-| `recommendedMaxFeeGwei` | number, finito, >= 0 | Taxa maxima total recomendada em Gwei. |
-| `recommendedPriorityFeeGwei` | number, finito, >= 0 | Gorjeta recomendada em Gwei. |
-| `ethUsd` | number, finito, >= 0 | Cotacao ETH/USD usada no calculo. |
-| `sampleSize` | integer, >= 0 | Quantidade de transacoes da amostra recente. |
-| `dataAgeMs` | integer, >= 0 | Idade, em milissegundos, da fonte mais antiga usada. |
-| `sources.mempool` | literal `alchemy` | Origem da amostra de mempool e dos dados Ethereum. |
-| `sources.price` | literal `coinbase` | Origem da cotacao ETH/USD. |
-| `sourceUpdatedAt.mempool` | string ISO 8601 UTC | Ultima atualizacao da fonte de mempool usada. |
-| `sourceUpdatedAt.price` | string ISO 8601 UTC | Ultima atualizacao da cotacao usada. |
-| `status.mempool` | `fresh` ou `stale` | Atualidade da fonte de mempool segundo a configuracao do backend. |
-| `status.price` | `fresh` ou `stale` | Atualidade da cotacao segundo a configuracao do backend. |
-| `status.persistence` | `available` ou `degraded` | Estado da persistencia no instante do snapshot. |
+| `timestamp` | data ISO 8601 UTC | Instante em que o estado foi produzido |
+| `metadata.network` | literal `ethereum-mainnet` | Rede fixa do MVP |
+| `recommendationState` | `current` ou `last-known` | Se os valores foram calculados com dados atuais ou preservados |
+| `recommendedMaxFeeGwei` | number, >= 0 | Teto recomendado em Gwei |
+| `recommendedPriorityFeeGwei` | number, >= 0 | Gorjeta recomendada em Gwei |
+| `baseFeeGwei` | number, >= 0 | Base Fee usada no cálculo |
+| `effectiveGasPriceGwei` | number, >= 0 | `baseFeeGwei + recommendedPriorityFeeGwei` |
+| `sampleSize` | integer, >= 0 | Quantidade de transações da janela recente |
+| `dataAgeMs` | integer, >= 0 | Idade da fonte mais antiga usada pela recomendação |
 
-O backend determina os limites de atualidade de cada fonte. O frontend nao
-recalcula `fresh` ou `stale`; ele apresenta o estado recebido e usa
-`dataAgeMs` como contexto para o usuario.
+Quando `recommendationState` for `last-known`, os valores de taxa continuam
+representando o último cálculo válido, `dataAgeMs` aumenta e
+`confidence.level` deve ser `unavailable`.
 
-## Envelope de snapshot
+### `estimatedTransferCost`
 
-REST e SSE usam o mesmo envelope JSON, com um unico campo `data` cujo valor e
-um `FeeSnapshot` completo. O exemplo integral aparece na resposta de
-`GET /api/v1/fees/current`.
+O custo usa sempre:
 
-## `GET /api/v1/fees/current`
+```text
+recommendedMaxFeeGwei × 10^-9 × 21.000 gas
+```
 
-Retorna o ultimo snapshot conhecido.
+O objeto é uma união discriminada por `status`:
 
-### Request
+- `fresh`: contém todos os campos do exemplo e uma cotação atual;
+- `stale`: contém os mesmos campos, mas usa a última cotação conhecida;
+- `unavailable`: contém apenas `status`, `transactionType`, `gasUnits` e
+  `maxCostEth` porque nenhuma cotação foi recebida.
 
-Nao aceita query parameters nem body.
+`transactionType` é sempre `native-eth-transfer` e `gasUnits` é sempre 21000.
+O custo é um teto estimado, não o valor efetivamente pago.
 
-### Response `200 OK`
+### `trend24h`
+
+Quando existem dados:
 
 ```json
 {
-  "data": {
-    "timestamp": "2026-08-26T18:42:15.123Z",
-    "metadata": {
-      "network": "ethereum-mainnet"
-    },
-    "recommendedMaxFeeGwei": 18.42,
-    "recommendedPriorityFeeGwei": 1.35,
-    "ethUsd": 4612.83,
-    "sampleSize": 842,
-    "dataAgeMs": 740,
-    "sources": {
-      "mempool": "alchemy",
-      "price": "coinbase"
-    },
-    "sourceUpdatedAt": {
-      "mempool": "2026-08-26T18:42:14.810Z",
-      "price": "2026-08-26T18:42:15.002Z"
-    },
-    "status": {
-      "mempool": "fresh",
-      "price": "fresh",
-      "persistence": "available"
-    }
-  }
+  "status": "available",
+  "windowMinutes": 5,
+  "percentChange": 8.4,
+  "currentMedianMaxFeeGwei": 32.1,
+  "previousMedianMaxFeeGwei": 29.61
 }
 ```
 
-### Falha especifica
+`percentChange` compara a mediana dos últimos cinco minutos com a mediana da
+janela equivalente 24 horas antes.
 
-Retorna `503 SNAPSHOT_UNAVAILABLE` quando o processo ainda nao possui um
-snapshot utilizavel.
-
-## `GET /api/v1/fees/history`
-
-Retorna snapshots persistidos para composicao de graficos.
-
-### Query parameters
-
-| Parametro | Obrigatorio | Regra |
-| --- | --- | --- |
-| `from` | sim | Data ISO 8601 UTC inclusiva. |
-| `to` | sim | Data ISO 8601 UTC exclusiva e posterior a `from`. |
-| `limit` | nao | Inteiro de 1 a 5000; padrao `1000`. |
-| `cursor` | nao | Cursor opaco retornado pela pagina anterior. |
-
-Exemplo:
-
-```http
-GET /api/v1/fees/history?from=2026-08-26T17:00:00.000Z&to=2026-08-26T18:00:00.000Z&limit=1000
-```
-
-Quando `cursor` for enviado, `from`, `to` e `limit` devem preservar os valores
-da consulta original. Cursor invalido, expirado ou usado com outro intervalo
-gera `400 INVALID_QUERY`.
-
-### Response `200 OK`
+Sem as duas janelas completas:
 
 ```json
 {
-  "data": [
-    {
-      "timestamp": "2026-08-26T17:00:05.000Z",
-      "metadata": {
-        "network": "ethereum-mainnet"
-      },
-      "recommendedMaxFeeGwei": 17.91,
-      "recommendedPriorityFeeGwei": 1.21,
-      "ethUsd": 4608.44,
-      "sampleSize": 801,
-      "dataAgeMs": 615,
-      "sources": {
-        "mempool": "alchemy",
-        "price": "coinbase"
-      },
-      "sourceUpdatedAt": {
-        "mempool": "2026-08-26T17:00:04.610Z",
-        "price": "2026-08-26T17:00:04.385Z"
-      },
-      "status": {
-        "mempool": "fresh",
-        "price": "fresh",
-        "persistence": "available"
-      }
-    }
-  ],
+  "status": "insufficient-history",
+  "windowMinutes": 5
+}
+```
+
+O frontend mostra `Not enough history` e não substitui o valor por zero.
+
+### `confidence`
+
+`level` aceita `high`, `medium`, `low` ou `unavailable`. `reasons` contém uma
+ou mais justificativas:
+
+| Código | Significado |
+| --- | --- |
+| `fresh-data` | Dados necessários estão atuais |
+| `stable-fees` | Distribuição recente está estável |
+| `strong-sample` | Amostra tem tamanho forte |
+| `aging-data` | Alguma fonte necessária está envelhecendo |
+| `volatile-fees` | Distribuição recente está volátil |
+| `weak-sample` | Amostra é pequena |
+| `missing-data` | Faltam dados necessários |
+
+Coinbase e persistência não participam do nível de confiança da recomendação.
+
+### Fontes e estados
+
+`sources` usa os literais `alchemy` para mempool/Ethereum e `coinbase` para
+preço. `sourceUpdatedAt` omite uma fonte somente quando ela nunca produziu dado.
+
+`status.mempool`, `status.ethereum` e `status.price` aceitam `fresh`, `stale`
+ou `unavailable`. `status.persistence` aceita `available` ou `degraded`.
+
+## Recurso `BlockSummary`
+
+`BlockSummary` é usado na lista recente, na consulta pontual e nos eventos de
+bloco.
+
+```json
+{
+  "number": "23548192",
+  "hash": "0x7d9452dca37be2e88b85f074f8142ab746d9f58b90d63d1d7ba2ea5ecbf10a4e",
+  "timestamp": "2026-08-30T18:42:15.000Z",
+  "finality": "latest",
+  "feeLevel": "normal",
+  "baseFeeGwei": 28.7,
+  "medianPriorityFeeGwei": 1.8,
+  "effectiveGasPriceGwei": 30.5,
+  "gasUsed": "23400000",
+  "gasLimit": "30000000",
+  "utilizationPercent": 78,
+  "transactionCount": 184,
+  "provider": "alchemy",
+  "etherscanUrl": "https://etherscan.io/block/23548192"
+}
+```
+
+### Semântica
+
+| Campo | Semântica |
+| --- | --- |
+| `finality` | `latest`, `safe` ou `finalized` segundo as referências canônicas da Ethereum |
+| `baseFeeGwei` | Base Fee definida pelo bloco |
+| `medianPriorityFeeGwei` | Mediana das gorjetas efetivamente pagas pelas transações |
+| `effectiveGasPriceGwei` | Base Fee + mediana da Priority Fee |
+| `utilizationPercent` | `gasUsed / gasLimit × 100` |
+| `feeLevel` | Classificação relativa ao Effective Gas Price dos blocos da última hora |
+
+`feeLevel` aceita `low`, `normal`, `elevated`, `high` ou `unavailable`:
+
+- abaixo de P25: `low`;
+- P25 até abaixo de P75: `normal`;
+- P75 até abaixo de P90: `elevated`;
+- P90 ou acima: `high`;
+- menos de 20 blocos disponíveis para a janela: `unavailable`.
+
+Para transações EIP-1559, a gorjeta efetiva é limitada pela diferença entre
+`maxFeePerGas` e a Base Fee. Para transações legadas, é `gasPrice - baseFee`,
+limitada ao mínimo zero. A mediana considera apenas valores válidos.
+
+## Envelopes
+
+Um recurso único usa:
+
+```json
+{
+  "data": {}
+}
+```
+
+Listas usam:
+
+```json
+{
+  "data": []
+}
+```
+
+O histórico mantém paginação por cursor. A lista fixa de blocos recentes não é
+paginada.
+
+## `GET /api/v1/fees/current`
+
+Retorna o último `FeeSnapshot` conhecido. Não aceita query nem body.
+
+- `200 OK`: envelope com `FeeSnapshot`.
+- `503 SNAPSHOT_UNAVAILABLE`: nenhum snapshot utilizável foi produzido desde o
+  início do processo.
+
+## `GET /api/v1/fees/history`
+
+Retorna snapshots persistidos em ordem crescente para o gráfico de Recommended
+Max Fee.
+
+### Query
+
+| Parâmetro | Obrigatório | Regra |
+| --- | --- | --- |
+| `from` | sim | Data ISO 8601 UTC inclusiva |
+| `to` | sim | Data ISO 8601 UTC exclusiva e posterior a `from` |
+| `limit` | não | Inteiro de 1 a 5000; padrão 1000 |
+| `cursor` | não | Cursor opaco retornado pela página anterior |
+
+Quando `cursor` for enviado, `from`, `to` e `limit` preservam os valores da
+consulta original.
+
+```json
+{
+  "data": [],
   "page": {
     "nextCursor": null,
     "hasMore": false
@@ -207,22 +298,65 @@ gera `400 INVALID_QUERY`.
 
 Regras:
 
-- `data` e ordenado por `timestamp` crescente.
-- Um intervalo sem registros retorna `200` com `data: []`.
-- `nextCursor` e string quando existe outra pagina; caso contrario e `null`.
-- `hasMore` deve ser equivalente a `nextCursor !== null`.
-- Indisponibilidade do MongoDB retorna `503 HISTORY_UNAVAILABLE` e nao afeta
-  `/current` ou `/stream`.
+- intervalo vazio retorna `200` com `data: []`;
+- `hasMore` equivale a `nextCursor !== null`;
+- MongoDB indisponível retorna `503 HISTORY_UNAVAILABLE`;
+- a falha do histórico não afeta `/fees/current` nem o SSE;
+- a retenção máxima é 30 dias.
 
-## `GET /api/v1/fees/stream`
+## `GET /api/v1/blocks/recent`
 
-Mantem uma conexao SSE para publicar snapshots calculados em tempo real.
+Retorna até os 20 blocos pós-EIP-1559 mais recentes em ordem decrescente por
+número. Não aceita query nem body.
 
-### Request
+```json
+{
+  "data": [
+    {
+      "number": "23548192",
+      "hash": "0x7d9452dca37be2e88b85f074f8142ab746d9f58b90d63d1d7ba2ea5ecbf10a4e",
+      "timestamp": "2026-08-30T18:42:15.000Z",
+      "finality": "latest",
+      "feeLevel": "normal",
+      "baseFeeGwei": 28.7,
+      "medianPriorityFeeGwei": 1.8,
+      "effectiveGasPriceGwei": 30.5,
+      "gasUsed": "23400000",
+      "gasLimit": "30000000",
+      "utilizationPercent": 78,
+      "transactionCount": 184,
+      "provider": "alchemy",
+      "etherscanUrl": "https://etherscan.io/block/23548192"
+    }
+  ]
+}
+```
 
-Nao aceita query parameters nem body. O cliente usa `EventSource`.
+Durante a inicialização, pode retornar menos de 20 itens. Sem cache e com a
+Alchemy indisponível, retorna `503 BLOCKS_UNAVAILABLE`.
 
-### Response `200 OK`
+## `GET /api/v1/blocks/:numberOrHash`
+
+Consulta um bloco sob demanda sem inseri-lo na lista recente.
+
+`numberOrHash` aceita:
+
+- número decimal sem sinal;
+- hash `0x` com 64 dígitos hexadecimais.
+
+O resultado é um envelope com `BlockSummary`. Blocos pesquisados não são
+persistidos apenas por terem sido pesquisados.
+
+Falhas específicas:
+
+- `400 INVALID_BLOCK_IDENTIFIER`;
+- `404 BLOCK_NOT_FOUND`;
+- `422 PRE_EIP1559_BLOCK_UNSUPPORTED`;
+- `503 ETHEREUM_PROVIDER_UNAVAILABLE`.
+
+## `GET /api/v1/live/stream`
+
+Mantém a única conexão SSE do Live Monitor.
 
 ```http
 Content-Type: text/event-stream
@@ -230,57 +364,80 @@ Cache-Control: no-cache, no-transform
 Connection: keep-alive
 ```
 
-O servidor anuncia tres segundos como intervalo inicial de reconexao:
+O servidor anuncia `retry: 3000` e envia heartbeat a cada 15 segundos.
+
+### Evento `fee-snapshot`
 
 ```text
-retry: 3000
-
-```
-
-Quando existe um snapshot, o servidor o envia imediatamente. Novos calculos
-usam o mesmo evento:
-
-```text
-id: 2026-08-26T18:42:15.123Z
+id: fee:2026-08-30T18:42:15.123Z
 event: fee-snapshot
-data: {"data":{"timestamp":"2026-08-26T18:42:15.123Z","metadata":{"network":"ethereum-mainnet"},"recommendedMaxFeeGwei":18.42,"recommendedPriorityFeeGwei":1.35,"ethUsd":4612.83,"sampleSize":842,"dataAgeMs":740,"sources":{"mempool":"alchemy","price":"coinbase"},"sourceUpdatedAt":{"mempool":"2026-08-26T18:42:14.810Z","price":"2026-08-26T18:42:15.002Z"},"status":{"mempool":"fresh","price":"fresh","persistence":"available"}}}
+data: {"data":{"timestamp":"2026-08-30T18:42:15.123Z"}}
 
 ```
 
-Regras:
+O `data` real contém o `FeeSnapshot` completo. O evento é publicado a cada
+cinco segundos e na chegada de bloco.
 
-- O nome do evento e `fee-snapshot`.
-- `data` usa exatamente o envelope de `/current`.
-- `id` usa o `timestamp` do snapshot.
-- O servidor envia um comentario de heartbeat a cada 15 segundos:
+### Evento `block-added`
 
-  ```text
-  : heartbeat 2026-08-26T18:42:30.123Z
+```text
+id: block:23548192:0x7d9452dca37be2e88b85f074f8142ab746d9f58b90d63d1d7ba2ea5ecbf10a4e
+event: block-added
+data: {"data":{"number":"23548192","hash":"0x7d9452dca37be2e88b85f074f8142ab746d9f58b90d63d1d7ba2ea5ecbf10a4e"}}
 
-  ```
+```
 
-- Se ainda nao houver snapshot, a conexao permanece aberta ate o primeiro
-  calculo.
-- `EventSource` faz a reconexao automatica. Ao reconectar, o servidor envia o
-  snapshot mais recente.
-- O MVP nao garante replay dos eventos perdidos e nao usa o MongoDB para
-  reconstruir o stream.
-- Falhas de Alchemy, Coinbase ou MongoDB nao encerram uma conexao estabelecida;
-  aparecem em `status` e `dataAgeMs`.
+O `data` real contém o `BlockSummary` completo.
+
+### Evento `block-status-changed`
+
+```text
+id: block-status:23548192:safe
+event: block-status-changed
+data: {"data":{"number":"23548192","hash":"0x7d9452dca37be2e88b85f074f8142ab746d9f58b90d63d1d7ba2ea5ecbf10a4e","finality":"safe"}}
+
+```
+
+O cliente localiza o bloco por número e hash e atualiza somente `finality`.
+
+### Conexão e reconexão
+
+- Ao conectar, o servidor envia o último `fee-snapshot` e o bloco mais recente,
+  quando existirem.
+- O frontend carrega `/fees/current` e `/blocks/recent` no bootstrap.
+- `EventSource` faz reconexão automática.
+- Após reconectar, o frontend refaz as duas consultas REST para cobrir eventos
+  perdidos.
+- O MVP não oferece replay pelo cabeçalho `Last-Event-ID`.
+- Falhas de fonte ou MongoDB não encerram uma conexão estabelecida.
+- `GET /api/v1/fees/stream` deixa de fazer parte do contrato antes da primeira
+  implementação executável.
+
+## Estado derivado pelo frontend
+
+O cabeçalho deriva:
+
+- `Live`: SSE conectado e todas as fontes/serviços em estado atual;
+- `Degraded`: SSE conectado e algum `status` está `stale`, `unavailable` ou
+  `degraded`;
+- `Offline`: SSE desconectado.
+
+`Updated … ago` usa o instante do último evento recebido. O frontend não
+recalcula confiança, tendência, fee level ou métricas de bloco.
 
 ## Erros REST
 
-Todos os erros REST usam:
+Todos os erros seguem:
 
 ```json
 {
   "error": {
     "code": "INVALID_QUERY",
-    "message": "Os parametros da consulta sao invalidos.",
+    "message": "Os parâmetros da consulta são inválidos.",
     "details": [
       {
         "field": "from",
-        "issue": "Deve ser uma data ISO 8601 valida."
+        "issue": "Deve ser uma data ISO 8601 válida."
       }
     ],
     "requestId": "req-01J6EXAMPLE"
@@ -288,35 +445,44 @@ Todos os erros REST usam:
 }
 ```
 
-`details` e omitido quando nao houver informacao segura e acionavel. Stack
-traces, credenciais e mensagens brutas de provedores nunca sao expostas.
+`details` é omitido quando não houver informação segura e acionável. Stack
+traces, credenciais e mensagens brutas de provedores nunca são expostas.
 
 | HTTP | `error.code` | Uso |
 | --- | --- | --- |
-| `400` | `INVALID_QUERY` | Data, limite ou cursor invalido. |
-| `400` | `INVALID_TIME_RANGE` | `from` maior ou igual a `to`. |
-| `404` | `ROUTE_NOT_FOUND` | Rota inexistente. |
-| `503` | `SNAPSHOT_UNAVAILABLE` | Snapshot atual ainda indisponivel. |
-| `503` | `HISTORY_UNAVAILABLE` | MongoDB indisponivel para consulta. |
-| `500` | `INTERNAL_ERROR` | Falha inesperada e nao exposta. |
+| 400 | `INVALID_QUERY` | Data, limite ou cursor inválido |
+| 400 | `INVALID_TIME_RANGE` | `from` maior ou igual a `to` |
+| 400 | `INVALID_BLOCK_IDENTIFIER` | Número ou hash malformado |
+| 404 | `ROUTE_NOT_FOUND` | Rota inexistente |
+| 404 | `BLOCK_NOT_FOUND` | Bloco não encontrado |
+| 422 | `PRE_EIP1559_BLOCK_UNSUPPORTED` | Bloco anterior ao escopo do MVP |
+| 503 | `SNAPSHOT_UNAVAILABLE` | Nenhum snapshot atual ou conhecido |
+| 503 | `HISTORY_UNAVAILABLE` | MongoDB indisponível para histórico |
+| 503 | `BLOCKS_UNAVAILABLE` | Lista recente indisponível |
+| 503 | `ETHEREUM_PROVIDER_UNAVAILABLE` | Consulta pontual não atendida |
+| 500 | `INTERNAL_ERROR` | Falha inesperada não exposta |
 
 ## Compatibilidade
 
-- Adicionar um campo opcional e uma mudanca compativel na `v1`.
-- Adicionar novo valor a um enum exige revisar consumidores antes da mudanca.
-- Remover ou renomear campo, mudar tipo ou alterar semantica exige `/api/v2`.
-- Mudancas neste documento devem atualizar schemas, fixtures e testes no mesmo
-  commit.
-- `apps/api` e `apps/web` nao podem declarar copias locais destes DTOs.
+Esta revisão antecede a primeira implementação dos schemas e pode definir novos
+campos obrigatórios dentro da `v1`. Depois da publicação de
+`packages/contracts`:
 
-## Criterios de aceite do contrato executavel
+- adicionar campo opcional é compatível;
+- adicionar valor a enum exige revisar consumidores;
+- remover/renomear campo, mudar tipo ou semântica exige `/api/v2`;
+- mudanças normativas atualizam schemas, fixtures e testes no mesmo commit;
+- `apps/api` e `apps/web` não declaram cópias locais dos DTOs.
 
-- Schemas Zod representam todos os requests, responses, erros e dados SSE.
-- Tipos TypeScript sao inferidos dos schemas, nao escritos em duplicidade.
-- Fixtures validas deste documento passam nos schemas.
-- Fixtures com datas invalidas, numeros negativos, `NaN`, enums desconhecidos
-  ou campos obrigatorios ausentes falham nos schemas.
-- Respostas reais da API sao verificadas contra `packages/contracts` nos testes.
-- O frontend usa as mesmas fixtures para REST e SSE.
-- Testes de integracao cobrem os tres endpoints sem depender de Alchemy,
-  Coinbase ou MongoDB externos.
+## Critérios de aceite do contrato executável
+
+- Schemas Zod representam recursos, uniões, requests, responses, erros e SSE.
+- Tipos TypeScript são inferidos dos schemas.
+- Fixtures válidas deste documento passam.
+- Datas inválidas, números não finitos, negativos indevidos, hashes inválidos,
+  enums desconhecidos e campos obrigatórios ausentes falham.
+- Respostas reais da API são verificadas contra `packages/contracts`.
+- Testes de integração cobrem todos os endpoints sem rede externa.
+- Testes de SSE cobrem os três eventos, heartbeat e reconexão sem replay.
+- Testes de domínio cobrem custo de 21.000 gas, tendência, confiança, mediana,
+  percentis, utilização e finality.
