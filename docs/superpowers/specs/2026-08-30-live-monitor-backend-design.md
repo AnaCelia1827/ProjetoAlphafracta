@@ -1,7 +1,7 @@
 # Live Monitor Backend Design
 
 **Date:** 2026-08-30  
-**Status:** Ready for written review  
+**Status:** Approved
 **Authority:** `docs/architecture.md` and `docs/api/fees-contract.md`
 
 ## Goal
