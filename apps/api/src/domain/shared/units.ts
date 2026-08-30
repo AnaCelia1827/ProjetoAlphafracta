@@ -50,6 +50,21 @@ export function multiplyRationals(left: Rational, right: Rational): Rational {
   return rational(left.numerator * right.numerator, left.denominator * right.denominator);
 }
 
+export function subtractRationals(left: Rational, right: Rational): Rational {
+  return rational(
+    left.numerator * right.denominator - right.numerator * left.denominator,
+    left.denominator * right.denominator,
+  );
+}
+
+export function divideRationals(left: Rational, right: Rational): Rational {
+  if (right.numerator === 0n) {
+    throw new RangeError('Cannot divide by zero');
+  }
+
+  return rational(left.numerator * right.denominator, left.denominator * right.numerator);
+}
+
 export function addRationals(left: Rational, right: Rational): Rational {
   return rational(
     left.numerator * right.denominator + right.numerator * left.denominator,
