@@ -1,0 +1,354 @@
+import type { Express } from 'express';
+import pino from 'pino';
+
+import { GetBlockByIdentifier } from './application/blocks/get-block-by-identifier.js';
+import { GetRecentBlocks } from './application/blocks/get-recent-blocks.js';
+import { ObserveBlock } from './application/blocks/observe-block.js';
+import { PrimeRecentBlocks } from './application/blocks/prime-recent-blocks.js';
+import { UpdateBlockFinality } from './application/blocks/update-block-finality.js';
+import { ApplicationError, PersistenceUnavailableError } from './application/common/errors.js';
+import {
+  CalculateFeeSnapshot,
+  FeeSnapshotCache,
+} from './application/fees/calculate-fee-snapshot.js';
+import { FeeMonitor } from './application/fees/fee-monitor.js';
+import { GetCurrentFeeSnapshot } from './application/fees/get-current-fee-snapshot.js';
+import { GetFeeHistory } from './application/fees/get-fee-history.js';
+import { createApp } from './app.js';
+import type { AppConfig } from './config/env.js';
+import type { FinalityHead } from './domain/blocks/models.js';
+import type { EthereumBlockSource, ObservedBlockRepository } from './domain/blocks/ports.js';
+import { RecentBlockWindow } from './domain/blocks/recent-block-window.js';
+import { FeeHistoryUnavailableError } from './domain/fees/fee-trend.js';
+import type {
+  EthereumFeeSource,
+  FeeSnapshotRepository,
+  MempoolSource,
+  PriceSource,
+} from './domain/fees/ports.js';
+import { SystemClock, type Clock } from './domain/shared/clock.js';
+import { AlchemyBlockClient } from './infrastructure/alchemy/alchemy-block-client.js';
+import { AlchemyFeeClient } from './infrastructure/alchemy/alchemy-fee-client.js';
+import { AlchemyMempoolClient } from './infrastructure/alchemy/alchemy-mempool-client.js';
+import { CoinbasePriceClient } from './infrastructure/coinbase/coinbase-price-client.js';
+import { MongoClientManager } from './infrastructure/mongodb/mongo-client.js';
+import { MongoFeeSnapshotRepository } from './infrastructure/mongodb/mongo-fee-snapshot-repository.js';
+import { MongoObservedBlockRepository } from './infrastructure/mongodb/mongo-observed-block-repository.js';
+import { LiveSseHub } from './interfaces/sse/live-sse-hub.js';
+
+const MONGO_RECONNECT_BASE_MS = 5_000;
+const MONGO_RECONNECT_MAX_MS = 60_000;
+
+interface LifecycleSource {
+  start(): void;
+  stop(): void;
+}
+
+interface HeadLifecycleSource {
+  start(listener: (head: FinalityHead) => void): void;
+  stop(): void;
+}
+
+interface Initializable {
+  initialize(): Promise<void>;
+}
+
+interface MongoLifecycle {
+  connect(): Promise<void>;
+  close(): Promise<void>;
+  isAvailable(): boolean;
+}
+
+export interface RuntimeAdapters {
+  clock: Clock;
+  mongo: MongoLifecycle | null;
+  feeRepository: FeeSnapshotRepository & Initializable;
+  blockRepository: ObservedBlockRepository & Initializable;
+  ethereumFeeSource: EthereumFeeSource;
+  mempoolSource: MempoolSource & LifecycleSource;
+  priceSource: PriceSource & LifecycleSource;
+  blockSource: EthereumBlockSource & HeadLifecycleSource;
+}
+
+export interface RuntimeLogger {
+  info(bindings: object, message: string): void;
+  warn(bindings: object, message: string): void;
+  error(bindings: object, message: string): void;
+}
+
+export interface Runtime {
+  app: Express;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+
+class UnavailableFeeRepository implements FeeSnapshotRepository, Initializable {
+  async initialize(): Promise<void> {}
+  async insert(): Promise<void> {
+    throw new PersistenceUnavailableError();
+  }
+  async findLatest(): Promise<null> {
+    throw new FeeHistoryUnavailableError();
+  }
+  async findWindow(): Promise<never[]> {
+    throw new FeeHistoryUnavailableError();
+  }
+  async findPage(): Promise<never> {
+    throw new FeeHistoryUnavailableError();
+  }
+  isAvailable(): boolean {
+    return false;
+  }
+}
+
+class UnavailableBlockRepository implements ObservedBlockRepository, Initializable {
+  async initialize(): Promise<void> {}
+  async saveCanonical(): Promise<void> {
+    throw new PersistenceUnavailableError();
+  }
+  async markNoncanonical(): Promise<void> {
+    throw new PersistenceUnavailableError();
+  }
+  async findRecent(): Promise<never[]> {
+    throw new PersistenceUnavailableError();
+  }
+  async findCanonicalBefore(): Promise<never[]> {
+    throw new PersistenceUnavailableError();
+  }
+  async updateFinality(): Promise<void> {
+    throw new PersistenceUnavailableError();
+  }
+  isAvailable(): boolean {
+    return false;
+  }
+}
+
+export function redactConnectionUrl(value: string): string {
+  const schemeEnd = value.indexOf('://');
+  if (schemeEnd < 1) return '[redacted-url]';
+  const scheme = value.slice(0, schemeEnd + 3);
+  const remainder = value.slice(schemeEnd + 3);
+  const boundary = [remainder.indexOf('/'), remainder.indexOf('?'), remainder.indexOf('#')]
+    .filter((index) => index >= 0)
+    .reduce((smallest, index) => Math.min(smallest, index), remainder.length);
+  const authority = remainder.slice(0, boundary);
+  const credentialsEnd = authority.lastIndexOf('@');
+  const host = credentialsEnd >= 0 ? authority.slice(credentialsEnd + 1) : authority;
+  return host.length === 0 ? '[redacted-url]' : `${scheme}${host}/[redacted]`;
+}
+
+function databaseName(uri: string): string {
+  const schemeEnd = uri.indexOf('://');
+  const remainder = uri.slice(schemeEnd + 3);
+  const pathStart = remainder.indexOf('/');
+  if (pathStart < 0) return 'alphractal';
+  const path = remainder.slice(pathStart + 1).split(/[?#]/, 1)[0];
+  return path === undefined || path === '' ? 'alphractal' : decodeURIComponent(path);
+}
+
+function concreteAdapters(config: AppConfig): RuntimeAdapters {
+  const clock = new SystemClock();
+  let mongo: MongoClientManager | null = null;
+  let feeRepository: FeeSnapshotRepository & Initializable;
+  let blockRepository: ObservedBlockRepository & Initializable;
+
+  if (config.MONGODB_URI === undefined) {
+    feeRepository = new UnavailableFeeRepository();
+    blockRepository = new UnavailableBlockRepository();
+  } else {
+    mongo = new MongoClientManager({
+      uri: config.MONGODB_URI,
+      databaseName: databaseName(config.MONGODB_URI),
+      serverSelectionTimeoutMs: config.PROVIDER_REQUEST_TIMEOUT_MS,
+    });
+    feeRepository = new MongoFeeSnapshotRepository(mongo);
+    blockRepository = new MongoObservedBlockRepository(mongo);
+  }
+
+  return {
+    clock,
+    mongo,
+    feeRepository,
+    blockRepository,
+    ethereumFeeSource: new AlchemyFeeClient({
+      httpUrl: config.ALCHEMY_HTTP_URL,
+      clock,
+      timeoutMs: config.PROVIDER_REQUEST_TIMEOUT_MS,
+    }),
+    mempoolSource: new AlchemyMempoolClient({ wsUrl: config.ALCHEMY_WS_URL, clock }),
+    priceSource: new CoinbasePriceClient({ wsUrl: config.COINBASE_WS_URL, clock }),
+    blockSource: new AlchemyBlockClient({
+      httpUrl: config.ALCHEMY_HTTP_URL,
+      wsUrl: config.ALCHEMY_WS_URL,
+      timeoutMs: config.PROVIDER_REQUEST_TIMEOUT_MS,
+    }),
+  };
+}
+
+function isRecoverable(error: unknown): boolean {
+  return (
+    error instanceof ApplicationError ||
+    error instanceof PersistenceUnavailableError ||
+    error instanceof FeeHistoryUnavailableError
+  );
+}
+
+export function createRuntime(
+  config: AppConfig,
+  options: { adapters?: RuntimeAdapters; logger?: RuntimeLogger } = {},
+): Runtime {
+  const adapters = options.adapters ?? concreteAdapters(config);
+  const logger = options.logger ?? pino({ enabled: process.env.NODE_ENV !== 'test' });
+  const sseHub = new LiveSseHub({ heartbeatMs: config.SSE_HEARTBEAT_MS });
+  const cache = new FeeSnapshotCache();
+  const recentBlocks = new RecentBlockWindow(20);
+  const calculate = new CalculateFeeSnapshot({
+    clock: adapters.clock,
+    ethereumFeeSource: adapters.ethereumFeeSource,
+    mempoolSource: adapters.mempoolSource,
+    priceSource: adapters.priceSource,
+    repository: adapters.feeRepository,
+    cache,
+    publisher: sseHub,
+  });
+  const feeMonitor = new FeeMonitor(calculate);
+  const getCurrentFeeSnapshot = new GetCurrentFeeSnapshot(cache, adapters.feeRepository);
+  const getFeeHistory = new GetFeeHistory(adapters.feeRepository);
+  const observeBlock = new ObserveBlock({
+    repository: adapters.blockRepository,
+    window: recentBlocks,
+    source: adapters.blockSource,
+    publisher: sseHub,
+    feeMonitor,
+  });
+  const primeRecentBlocks = new PrimeRecentBlocks({
+    repository: adapters.blockRepository,
+    window: recentBlocks,
+    source: adapters.blockSource,
+    observe: observeBlock,
+  });
+  const updateBlockFinality = new UpdateBlockFinality({
+    source: adapters.blockSource,
+    repository: adapters.blockRepository,
+    window: recentBlocks,
+    publisher: sseHub,
+  });
+  const app = createApp({
+    corsOrigins: new Set(config.CORS_ORIGINS),
+    getCurrentFeeSnapshot,
+    getFeeHistory,
+    getRecentBlocks: new GetRecentBlocks(recentBlocks),
+    getBlockByIdentifier: new GetBlockByIdentifier({
+      repository: adapters.blockRepository,
+      source: adapters.blockSource,
+    }),
+    liveSseHub: sseHub,
+  });
+
+  let started = false;
+  let stopped = false;
+  let feeInterval: ReturnType<typeof setInterval> | null = null;
+  let mongoReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let mongoReconnectDelayMs = MONGO_RECONNECT_BASE_MS;
+  let mongoConnecting = false;
+  let headWork: Promise<void> = Promise.resolve();
+
+  const runFeeMonitor = async () => {
+    try {
+      await feeMonitor.trigger();
+    } catch (error) {
+      logger.warn(
+        { component: 'fee-monitor', recoverable: isRecoverable(error) },
+        'Fee monitor iteration failed',
+      );
+    }
+  };
+
+  const connectMongo = async (recovering: boolean): Promise<boolean> => {
+    if (adapters.mongo === null || mongoConnecting) return false;
+    mongoConnecting = true;
+    try {
+      await adapters.mongo.connect();
+      await adapters.feeRepository.initialize();
+      await adapters.blockRepository.initialize();
+      await getCurrentFeeSnapshot.bootstrap();
+      if (recovering) {
+        await primeRecentBlocks.execute();
+        await runFeeMonitor();
+      }
+      logger.info({ component: 'mongodb' }, 'MongoDB persistence is available');
+      return true;
+    } catch {
+      logger.warn({ component: 'mongodb' }, 'MongoDB persistence is unavailable; retry scheduled');
+      return false;
+    } finally {
+      mongoConnecting = false;
+    }
+  };
+
+  const scheduleMongoReconnect = () => {
+    if (adapters.mongo === null || stopped) return;
+    mongoReconnectTimer = setTimeout(async () => {
+      const connected = adapters.mongo!.isAvailable() || (await connectMongo(true));
+      mongoReconnectDelayMs = connected
+        ? MONGO_RECONNECT_BASE_MS
+        : Math.min(mongoReconnectDelayMs * 2, MONGO_RECONNECT_MAX_MS);
+      scheduleMongoReconnect();
+    }, mongoReconnectDelayMs);
+    mongoReconnectTimer.unref();
+  };
+
+  return {
+    app,
+    async start() {
+      if (started || stopped) return;
+      started = true;
+
+      await connectMongo(false);
+      await getCurrentFeeSnapshot.bootstrap();
+      const restored = cache.get();
+      if (restored !== null) sseHub.publish({ type: 'fee-snapshot', snapshot: restored });
+
+      adapters.mempoolSource.start();
+      adapters.priceSource.start();
+      adapters.blockSource.start((head) => {
+        headWork = headWork
+          .then(async () => {
+            await observeBlock.execute(head.hash);
+            await updateBlockFinality.execute();
+          })
+          .catch((error: unknown) => {
+            logger.warn(
+              { component: 'block-observer', recoverable: isRecoverable(error) },
+              'Block observation failed',
+            );
+          });
+      });
+
+      try {
+        await primeRecentBlocks.execute();
+      } catch (error) {
+        logger.warn(
+          { component: 'block-bootstrap', recoverable: isRecoverable(error) },
+          'Recent block bootstrap was incomplete',
+        );
+      }
+      await runFeeMonitor();
+      scheduleMongoReconnect();
+      feeInterval = setInterval(() => void runFeeMonitor(), config.FEE_INTERVAL_MS);
+      feeInterval.unref();
+    },
+    async stop() {
+      if (stopped) return;
+      stopped = true;
+      if (feeInterval !== null) clearInterval(feeInterval);
+      if (mongoReconnectTimer !== null) clearTimeout(mongoReconnectTimer);
+      adapters.blockSource.stop();
+      adapters.mempoolSource.stop();
+      adapters.priceSource.stop();
+      await headWork;
+      sseHub.close();
+      if (adapters.mongo !== null) await adapters.mongo.close();
+    },
+  };
+}

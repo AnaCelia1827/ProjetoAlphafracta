@@ -13,6 +13,10 @@ const MAX_QUEUED_BYTES = 256 * 1024;
 const HEARTBEAT_MS = 15_000;
 const RETRY_MS = 3_000;
 
+export interface LiveSseHubOptions {
+  heartbeatMs?: number;
+}
+
 interface SseClient {
   request: Request;
   response: Response;
@@ -34,10 +38,10 @@ export class LiveSseHub implements LiveEventPublisher {
   private latestFeeSnapshot: FeeSnapshot | null = null;
   private latestBlock: BlockSummary | null = null;
 
-  constructor() {
+  constructor(options: LiveSseHubOptions = {}) {
     this.heartbeat = setInterval(() => {
       this.broadcast(': heartbeat\n\n');
-    }, HEARTBEAT_MS);
+    }, options.heartbeatMs ?? HEARTBEAT_MS);
     this.heartbeat.unref();
   }
 
