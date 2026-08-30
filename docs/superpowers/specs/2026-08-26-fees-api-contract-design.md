@@ -1,5 +1,10 @@
 # Design do contrato de comunicacao da API Fees
 
+> **Status histórico:** este design inicial foi substituído em 30 de agosto de
+> 2026 por `2026-08-30-live-monitor-backend-design.md` e pelo contrato normativo
+> revisado em `docs/api/fees-contract.md`. Ele permanece apenas como registro da
+> decisão anterior.
+
 ## Objetivo
 
 Definir uma fronteira estavel e executavel entre o frontend Next.js e o backend
@@ -37,12 +42,12 @@ ciclo de conexao e reconexao.
 
 ## Superficie HTTP
 
-| Endpoint | Responsabilidade |
-| --- | --- |
-| `GET /api/v1/fees/current` | Retornar o ultimo `FeeSnapshot`. |
+| Endpoint                   | Responsabilidade                                                                |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `GET /api/v1/fees/current` | Retornar o ultimo `FeeSnapshot`.                                                |
 | `GET /api/v1/fees/history` | Retornar snapshots persistidos em ordem cronologica e com paginacao por cursor. |
-| `GET /api/v1/fees/stream` | Publicar o ultimo snapshot e os proximos calculos por SSE. |
-| `GET /health` | Verificar a infraestrutura; fica fora do contrato de dominio Fees. |
+| `GET /api/v1/fees/stream`  | Publicar o ultimo snapshot e os proximos calculos por SSE.                      |
+| `GET /health`              | Verificar a infraestrutura; fica fora do contrato de dominio Fees.              |
 
 Os endpoints REST usam envelopes JSON, request ID, CORS configurado e
 `Cache-Control: no-store`. O stream usa `text/event-stream`, evento
@@ -94,13 +99,13 @@ ao voltar. Replay completo de eventos nao faz parte do MVP.
 
 ## Fronteiras de implementacao
 
-| Unidade | Responsabilidade |
-| --- | --- |
-| `docs/api/fees-contract.md` | Semantica, endpoints, payloads, erros, compatibilidade e exemplos. |
-| `packages/contracts` | Schemas Zod, tipos inferidos e fixtures compartilhadas. |
-| `apps/api` | Validar entrada e produzir respostas compativeis com os schemas. |
-| `apps/web` | Validar REST/SSE e apresentar estados normal, stale, degraded e unavailable. |
-| Testes de integracao | Provar que a API real entrega o contrato consumido pelo frontend. |
+| Unidade                     | Responsabilidade                                                             |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `docs/api/fees-contract.md` | Semantica, endpoints, payloads, erros, compatibilidade e exemplos.           |
+| `packages/contracts`        | Schemas Zod, tipos inferidos e fixtures compartilhadas.                      |
+| `apps/api`                  | Validar entrada e produzir respostas compativeis com os schemas.             |
+| `apps/web`                  | Validar REST/SSE e apresentar estados normal, stale, degraded e unavailable. |
+| Testes de integracao        | Provar que a API real entrega o contrato consumido pelo frontend.            |
 
 Nao serao criados DTOs equivalentes dentro de `apps/api` ou `apps/web`.
 
@@ -163,4 +168,3 @@ valores de enum exigem revisao dos consumidores antes de entrar na `v1`.
 - Frontend e backend nao possuem DTOs duplicados.
 - Cada aplicacao pode ser desenvolvida e testada isoladamente.
 - A integracao falha automaticamente diante de mudanca incompativel.
-

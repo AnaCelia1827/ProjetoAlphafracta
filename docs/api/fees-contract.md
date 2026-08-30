@@ -35,6 +35,8 @@ domínio do Live Monitor.
 - Datas usam ISO 8601 em UTC com sufixo `Z`.
 - Gwei, ETH e USD usam números JSON finitos e não negativos.
 - Percentuais de variação podem ser negativos; utilização fica entre 0 e 100.
+- Gwei usa até 9 casas decimais, ETH até 18, USD até 6 e percentuais até 2.
+  O arredondamento comum é metade para longe de zero.
 - Números de bloco, `gasUsed` e `gasLimit` são strings decimais para não
   depender dos limites numéricos do JavaScript.
 - Hashes usam strings `0x` com 64 dígitos hexadecimais.
@@ -77,11 +79,7 @@ mesmo recurso aparece em `/fees/current`, em `/fees/history` e no evento
   },
   "confidence": {
     "level": "high",
-    "reasons": [
-      "fresh-data",
-      "stable-fees",
-      "strong-sample"
-    ]
+    "reasons": ["fresh-data", "stable-fees", "strong-sample"]
   },
   "sampleSize": 2847,
   "dataAgeMs": 320,
@@ -106,17 +104,17 @@ mesmo recurso aparece em `/fees/current`, em `/fees/history` e no evento
 
 ### Campos principais
 
-| Campo | Tipo e restrições | Semântica |
-| --- | --- | --- |
-| `timestamp` | data ISO 8601 UTC | Instante em que o estado foi produzido |
-| `metadata.network` | literal `ethereum-mainnet` | Rede fixa do MVP |
-| `recommendationState` | `current` ou `last-known` | Se os valores foram calculados com dados atuais ou preservados |
-| `recommendedMaxFeeGwei` | number, >= 0 | Teto recomendado em Gwei |
-| `recommendedPriorityFeeGwei` | number, >= 0 | Gorjeta recomendada em Gwei |
-| `baseFeeGwei` | number, >= 0 | Base Fee usada no cálculo |
-| `effectiveGasPriceGwei` | number, >= 0 | `baseFeeGwei + recommendedPriorityFeeGwei` |
-| `sampleSize` | integer, >= 0 | Quantidade de transações da janela recente |
-| `dataAgeMs` | integer, >= 0 | Idade da fonte mais antiga usada pela recomendação |
+| Campo                        | Tipo e restrições          | Semântica                                                      |
+| ---------------------------- | -------------------------- | -------------------------------------------------------------- |
+| `timestamp`                  | data ISO 8601 UTC          | Instante em que o estado foi produzido                         |
+| `metadata.network`           | literal `ethereum-mainnet` | Rede fixa do MVP                                               |
+| `recommendationState`        | `current` ou `last-known`  | Se os valores foram calculados com dados atuais ou preservados |
+| `recommendedMaxFeeGwei`      | number, >= 0               | Teto recomendado em Gwei                                       |
+| `recommendedPriorityFeeGwei` | number, >= 0               | Gorjeta recomendada em Gwei                                    |
+| `baseFeeGwei`                | number, >= 0               | Base Fee usada no cálculo                                      |
+| `effectiveGasPriceGwei`      | number, >= 0               | `baseFeeGwei + recommendedPriorityFeeGwei`                     |
+| `sampleSize`                 | integer, >= 0              | Quantidade de transações da janela recente                     |
+| `dataAgeMs`                  | integer, >= 0              | Idade da fonte mais antiga usada pela recomendação             |
 
 Quando `recommendationState` for `last-known`, os valores de taxa continuam
 representando o último cálculo válido, `dataAgeMs` aumenta e
@@ -168,20 +166,30 @@ Sem as duas janelas completas:
 
 O frontend mostra `Not enough history` e não substitui o valor por zero.
 
+Quando o repositório histórico estiver indisponível:
+
+```json
+{
+  "status": "unavailable",
+  "windowMinutes": 5,
+  "reason": "history-unavailable"
+}
+```
+
 ### `confidence`
 
 `level` aceita `high`, `medium`, `low` ou `unavailable`. `reasons` contém uma
 ou mais justificativas:
 
-| Código | Significado |
-| --- | --- |
-| `fresh-data` | Dados necessários estão atuais |
-| `stable-fees` | Distribuição recente está estável |
-| `strong-sample` | Amostra tem tamanho forte |
-| `aging-data` | Alguma fonte necessária está envelhecendo |
-| `volatile-fees` | Distribuição recente está volátil |
-| `weak-sample` | Amostra é pequena |
-| `missing-data` | Faltam dados necessários |
+| Código          | Significado                               |
+| --------------- | ----------------------------------------- |
+| `fresh-data`    | Dados necessários estão atuais            |
+| `stable-fees`   | Distribuição recente está estável         |
+| `strong-sample` | Amostra tem tamanho forte                 |
+| `aging-data`    | Alguma fonte necessária está envelhecendo |
+| `volatile-fees` | Distribuição recente está volátil         |
+| `weak-sample`   | Amostra é pequena                         |
+| `missing-data`  | Faltam dados necessários                  |
 
 Coinbase e persistência não participam do nível de confiança da recomendação.
 
@@ -192,6 +200,11 @@ preço. `sourceUpdatedAt` omite uma fonte somente quando ela nunca produziu dado
 
 `status.mempool`, `status.ethereum` e `status.price` aceitam `fresh`, `stale`
 ou `unavailable`. `status.persistence` aceita `available` ou `degraded`.
+
+Mempool e Ethereum ficam `fresh` até 10 segundos, `stale` acima de 10 até 30
+segundos e `unavailable` depois de 30 segundos ou antes do primeiro dado. O
+preço fica `fresh` até 30 segundos, `stale` depois disso quando há uma cotação
+anterior e `unavailable` antes da primeira cotação.
 
 ## Recurso `BlockSummary`
 
@@ -219,14 +232,14 @@ bloco.
 
 ### Semântica
 
-| Campo | Semântica |
-| --- | --- |
-| `finality` | `latest`, `safe` ou `finalized` segundo as referências canônicas da Ethereum |
-| `baseFeeGwei` | Base Fee definida pelo bloco |
-| `medianPriorityFeeGwei` | Mediana das gorjetas efetivamente pagas pelas transações |
-| `effectiveGasPriceGwei` | Base Fee + mediana da Priority Fee |
-| `utilizationPercent` | `gasUsed / gasLimit × 100` |
-| `feeLevel` | Classificação relativa ao Effective Gas Price dos blocos da última hora |
+| Campo                   | Semântica                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `finality`              | `latest`, `safe` ou `finalized` segundo as referências canônicas da Ethereum |
+| `baseFeeGwei`           | Base Fee definida pelo bloco                                                 |
+| `medianPriorityFeeGwei` | Mediana das gorjetas efetivamente pagas pelas transações                     |
+| `effectiveGasPriceGwei` | Base Fee + mediana da Priority Fee                                           |
+| `utilizationPercent`    | `gasUsed / gasLimit × 100`                                                   |
+| `feeLevel`              | Classificação relativa ao Effective Gas Price dos blocos da última hora      |
 
 `feeLevel` aceita `low`, `normal`, `elevated`, `high` ou `unavailable`:
 
@@ -276,12 +289,12 @@ Max Fee.
 
 ### Query
 
-| Parâmetro | Obrigatório | Regra |
-| --- | --- | --- |
-| `from` | sim | Data ISO 8601 UTC inclusiva |
-| `to` | sim | Data ISO 8601 UTC exclusiva e posterior a `from` |
-| `limit` | não | Inteiro de 1 a 5000; padrão 1000 |
-| `cursor` | não | Cursor opaco retornado pela página anterior |
+| Parâmetro | Obrigatório | Regra                                            |
+| --------- | ----------- | ------------------------------------------------ |
+| `from`    | sim         | Data ISO 8601 UTC inclusiva                      |
+| `to`      | sim         | Data ISO 8601 UTC exclusiva e posterior a `from` |
+| `limit`   | não         | Inteiro de 1 a 5000; padrão 1000                 |
+| `cursor`  | não         | Cursor opaco retornado pela página anterior      |
 
 Quando `cursor` for enviado, `from`, `to` e `limit` preservam os valores da
 consulta original.
@@ -337,7 +350,8 @@ Alchemy indisponível, retorna `503 BLOCKS_UNAVAILABLE`.
 
 ## `GET /api/v1/blocks/:numberOrHash`
 
-Consulta um bloco sob demanda sem inseri-lo na lista recente.
+Consulta um bloco sob demanda sem inseri-lo na lista recente. O primeiro bloco
+aceito é o 12965000, ativação da London Upgrade na Ethereum Mainnet.
 
 `numberOrHash` aceita:
 
@@ -351,7 +365,8 @@ Falhas específicas:
 
 - `400 INVALID_BLOCK_IDENTIFIER`;
 - `404 BLOCK_NOT_FOUND`;
-- `422 PRE_EIP1559_BLOCK_UNSUPPORTED`;
+- `422 PRE_EIP1559_BLOCK_UNSUPPORTED` para números abaixo de 12965000 ou
+  blocos sem `baseFeePerGas`;
 - `503 ETHEREUM_PROVIDER_UNAVAILABLE`.
 
 ## `GET /api/v1/live/stream`
@@ -448,19 +463,19 @@ Todos os erros seguem:
 `details` é omitido quando não houver informação segura e acionável. Stack
 traces, credenciais e mensagens brutas de provedores nunca são expostas.
 
-| HTTP | `error.code` | Uso |
-| --- | --- | --- |
-| 400 | `INVALID_QUERY` | Data, limite ou cursor inválido |
-| 400 | `INVALID_TIME_RANGE` | `from` maior ou igual a `to` |
-| 400 | `INVALID_BLOCK_IDENTIFIER` | Número ou hash malformado |
-| 404 | `ROUTE_NOT_FOUND` | Rota inexistente |
-| 404 | `BLOCK_NOT_FOUND` | Bloco não encontrado |
-| 422 | `PRE_EIP1559_BLOCK_UNSUPPORTED` | Bloco anterior ao escopo do MVP |
-| 503 | `SNAPSHOT_UNAVAILABLE` | Nenhum snapshot atual ou conhecido |
-| 503 | `HISTORY_UNAVAILABLE` | MongoDB indisponível para histórico |
-| 503 | `BLOCKS_UNAVAILABLE` | Lista recente indisponível |
-| 503 | `ETHEREUM_PROVIDER_UNAVAILABLE` | Consulta pontual não atendida |
-| 500 | `INTERNAL_ERROR` | Falha inesperada não exposta |
+| HTTP | `error.code`                    | Uso                                 |
+| ---- | ------------------------------- | ----------------------------------- |
+| 400  | `INVALID_QUERY`                 | Data, limite ou cursor inválido     |
+| 400  | `INVALID_TIME_RANGE`            | `from` maior ou igual a `to`        |
+| 400  | `INVALID_BLOCK_IDENTIFIER`      | Número ou hash malformado           |
+| 404  | `ROUTE_NOT_FOUND`               | Rota inexistente                    |
+| 404  | `BLOCK_NOT_FOUND`               | Bloco não encontrado                |
+| 422  | `PRE_EIP1559_BLOCK_UNSUPPORTED` | Bloco anterior ao escopo do MVP     |
+| 503  | `SNAPSHOT_UNAVAILABLE`          | Nenhum snapshot atual ou conhecido  |
+| 503  | `HISTORY_UNAVAILABLE`           | MongoDB indisponível para histórico |
+| 503  | `BLOCKS_UNAVAILABLE`            | Lista recente indisponível          |
+| 503  | `ETHEREUM_PROVIDER_UNAVAILABLE` | Consulta pontual não atendida       |
+| 500  | `INTERNAL_ERROR`                | Falha inesperada não exposta        |
 
 ## Compatibilidade
 

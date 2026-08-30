@@ -17,17 +17,17 @@ on-chain.
 
 ## Decisões técnicas
 
-| Área | Decisão |
-| --- | --- |
-| Frontend | Next.js com TypeScript |
-| Backend | Express sobre Node.js e TypeScript |
-| Dados Ethereum | Alchemy RPC, com `viem` para consultas e tipos Ethereum |
-| Mempool | WebSocket `alchemy_pendingTransactions` da Alchemy |
-| Blocos | Cabeçalhos e blocos completos obtidos pela Alchemy |
-| Cotação | WebSocket público da Coinbase, produto `ETH-USD` |
-| Atualização da tela | Um único stream SSE do backend para o frontend |
-| Persistência | MongoDB, com retenção de 30 dias |
-| Organização | Monólito modular com DDD leve; sem fila, Redis ou microsserviços no MVP |
+| Área                | Decisão                                                                 |
+| ------------------- | ----------------------------------------------------------------------- |
+| Frontend            | Next.js com TypeScript                                                  |
+| Backend             | Express sobre Node.js e TypeScript                                      |
+| Dados Ethereum      | Alchemy RPC, com `viem` para consultas e tipos Ethereum                 |
+| Mempool             | WebSocket `alchemy_pendingTransactions` da Alchemy                      |
+| Blocos              | Cabeçalhos e blocos completos obtidos pela Alchemy                      |
+| Cotação             | WebSocket público da Coinbase, produto `ETH-USD`                        |
+| Atualização da tela | Um único stream SSE do backend para o frontend                          |
+| Persistência        | MongoDB, com retenção de 30 dias                                        |
+| Organização         | Monólito modular com DDD leve; sem fila, Redis ou microsserviços no MVP |
 
 Express mantém o backend enxuto e explícito. O DDD leve preserva as regras de
 estimativa, confiança e classificação fora de Express, Alchemy e MongoDB sem
@@ -35,18 +35,18 @@ introduzir padrões que o MVP ainda não exige.
 
 ## Decisões de produto
 
-| Elemento | Decisão |
-| --- | --- |
-| Rede | Ethereum Mainnet fixa; seletor avançado permanece desabilitado para uso futuro |
-| Custo em USD | Custo máximo de uma transferência nativa de ETH com 21.000 gas |
-| Tendência de 24h | Variação entre medianas de janelas de cinco minutos separadas por 24 horas |
-| Confiança | `High`, `Medium`, `Low` ou `Unavailable`, acompanhada de justificativas |
-| Composição | Base Fee + Priority Fee; Max Fee aparece separadamente como teto |
-| Histórico visual | Recommended Max Fee, com intervalos de 5m, 15m, 1h, 6h e 24h; padrão 1h |
-| Blocos recentes | Últimos 20 blocos, três visíveis, com rolagem |
-| Pesquisa | Número ou hash de bloco pós-EIP-1559, consultado sob demanda |
-| Análise externa | O MVP abre o bloco no Etherscan; análise interna fica para uma fase futura |
-| Navegação | `Dashboard` e `History` permanecem visíveis e desabilitados; `Live Monitor` é ativo |
+| Elemento         | Decisão                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Rede             | Ethereum Mainnet fixa; seletor avançado permanece desabilitado para uso futuro      |
+| Custo em USD     | Custo máximo de uma transferência nativa de ETH com 21.000 gas                      |
+| Tendência de 24h | Variação entre medianas de janelas de cinco minutos separadas por 24 horas          |
+| Confiança        | `High`, `Medium`, `Low` ou `Unavailable`, acompanhada de justificativas             |
+| Composição       | Base Fee + Priority Fee; Max Fee aparece separadamente como teto                    |
+| Histórico visual | Recommended Max Fee, com intervalos de 5m, 15m, 1h, 6h e 24h; padrão 1h             |
+| Blocos recentes  | Últimos 20 blocos, três visíveis, com rolagem                                       |
+| Pesquisa         | Número ou hash de bloco pós-EIP-1559, consultado sob demanda                        |
+| Análise externa  | O MVP abre o bloco no Etherscan; análise interna fica para uma fase futura          |
+| Navegação        | `Dashboard` e `History` permanecem visíveis e desabilitados; `Live Monitor` é ativo |
 
 ## Estrutura proposta
 
@@ -80,23 +80,23 @@ docs/
 
 O MVP possui dois módulos relacionados:
 
-| Módulo | Responsabilidade |
-| --- | --- |
-| `fees` | Produzir snapshots, tendência, confiança e custo estimado da transferência |
+| Módulo   | Responsabilidade                                                                      |
+| -------- | ------------------------------------------------------------------------------------- |
+| `fees`   | Produzir snapshots, tendência, confiança e custo estimado da transferência            |
 | `blocks` | Observar blocos, calcular métricas por bloco, acompanhar finality e atender pesquisas |
 
 As camadas continuam separadas:
 
-| Camada | Responsabilidade |
-| --- | --- |
-| `domain` | Valores, regras puras e portas; não importa Express, `viem`, MongoDB ou ambiente |
-| `application` | Coordena casos de uso, publicação e persistência |
-| `infrastructure` | Implementa Alchemy, Coinbase e MongoDB |
-| `interfaces` | Traduz REST e SSE para chamadas da aplicação |
+| Camada           | Responsabilidade                                                                 |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `domain`         | Valores, regras puras e portas; não importa Express, `viem`, MongoDB ou ambiente |
+| `application`    | Coordena casos de uso, publicação e persistência                                 |
+| `infrastructure` | Implementa Alchemy, Coinbase e MongoDB                                           |
+| `interfaces`     | Traduz REST e SSE para chamadas da aplicação                                     |
 
 O domínio define portas como `SnapshotRepository`, `ObservedBlockRepository`,
 `EthereumDataSource` e `LiveEventPublisher`. O `server.ts` atua como
-*composition root* e liga as portas aos adaptadores concretos.
+_composition root_ e liga as portas aos adaptadores concretos.
 
 ## Fluxo de dados ao vivo
 
@@ -188,8 +188,8 @@ os dados da Alchemy deixam de ser suficientes, o último valor permanece como
 
 ## Observação e consulta de blocos
 
-O backend mantém os 20 blocos mais recentes e expõe três deles por vez no
-layout, com rolagem no frontend. Para cada bloco, calcula:
+O backend mantém os 20 blocos mais recentes. O frontend exibe três deles por vez
+e oferece rolagem. Para cada bloco, o backend calcula:
 
 - Base Fee;
 - mediana das Priority Fees efetivamente pagas;
@@ -211,8 +211,9 @@ Até existirem ao menos 20 blocos na janela, a classificação é `unavailable`.
 
 A pesquisa aceita número decimal ou hash e consulta a Alchemy sob demanda. O
 resultado substitui temporariamente o detalhe selecionado, não entra na lista
-dos 20 recentes e oferece `Back to Live`. Blocos anteriores ao EIP-1559 ficam
-fora do MVP e retornam erro explícito.
+dos 20 recentes e oferece `Back to Live`. Blocos anteriores ao 12965000,
+ativação da London Upgrade na Mainnet, ficam fora do MVP e retornam erro
+explícito.
 
 `Analyze Block` abre o bloco no Etherscan. A futura análise interna poderá
 reutilizar o mesmo recurso sem alterar o coletor.
@@ -279,6 +280,8 @@ mas não interrompem uma seleção anterior; a interface sinaliza
 
 ## Referências técnicas
 
+- [EIP-1559 — mercado de taxas e limite de mudança da Base Fee](https://eips.ethereum.org/EIPS/eip-1559)
+- [EIP-6953 — ativações por bloco, incluindo London](https://eips.ethereum.org/EIPS/eip-6953)
 - [Alchemy — `alchemy_pendingTransactions`](https://www.alchemy.com/docs/reference/alchemy-pendingtransactions)
 - [Alchemy — limites e escopo de subscriptions](https://www.alchemy.com/docs/reference/subscription-api)
 - [Coinbase Exchange — canal `ticker`](https://docs.cdp.coinbase.com/exchange/websocket-feed/channels)
