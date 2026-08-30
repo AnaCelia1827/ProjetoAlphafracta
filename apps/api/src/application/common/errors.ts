@@ -33,3 +33,31 @@ export class PersistenceUnavailableError extends Error {
     this.name = new.target.name;
   }
 }
+
+export class InvalidBlockIdentifierError extends ApplicationError {
+  constructor() {
+    super('INVALID_BLOCK_IDENTIFIER', 400, 'The block identifier is invalid');
+  }
+}
+
+export class BlockNotFoundError extends ApplicationError {
+  constructor() {
+    super('BLOCK_NOT_FOUND', 404, 'The requested block was not found');
+  }
+}
+
+export class PreEip1559BlockUnsupportedError extends ApplicationError {
+  constructor() {
+    super(
+      'PRE_EIP1559_BLOCK_UNSUPPORTED',
+      422,
+      'Blocks before EIP-1559 are outside the supported range',
+    );
+  }
+}
+
+export class BlocksUnavailableError extends ApplicationError {
+  constructor() {
+    super('BLOCKS_UNAVAILABLE', 503, 'Recent blocks are unavailable');
+  }
+}

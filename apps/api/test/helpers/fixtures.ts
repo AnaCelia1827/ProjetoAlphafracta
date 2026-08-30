@@ -1,3 +1,4 @@
+import type { BlockSummary, NormalizedBlock } from '../../src/domain/blocks/models.js';
 import type { FeeSnapshot, PendingBid } from '../../src/domain/fees/models.js';
 import { rational } from '../../src/domain/shared/units.js';
 
@@ -46,6 +47,48 @@ export function feeSnapshot(overrides: Partial<FeeSnapshot> = {}): FeeSnapshot {
       price: 'unavailable',
       persistence: 'available',
     },
+    ...overrides,
+  };
+}
+
+export function normalizedBlock(
+  number: bigint,
+  hash: `0x${string}` = `0x${number.toString(16).padStart(64, '0')}`,
+): NormalizedBlock {
+  return {
+    number,
+    hash,
+    timestamp: new Date(FIXED_NOW.getTime() + Number(number - 20_000_000n) * 12_000),
+    baseFeePerGasWei: 30_000_000_000n,
+    gasUsed: 15_000_000n,
+    gasLimit: 30_000_000n,
+    transactions: [
+      {
+        kind: 'eip1559',
+        maxFeePerGasWei: 40_000_000_000n,
+        maxPriorityFeePerGasWei: 2_000_000_000n,
+      },
+    ],
+  };
+}
+
+export function blockSummary(number: bigint, overrides: Partial<BlockSummary> = {}): BlockSummary {
+  const block = normalizedBlock(number);
+  return {
+    network: 'ethereum-mainnet',
+    number,
+    hash: block.hash,
+    timestamp: block.timestamp,
+    finality: 'latest',
+    feeLevel: 'unavailable',
+    baseFeeWei: 30_000_000_000n,
+    medianPriorityFeeWei: rational(2_000_000_000n),
+    effectiveGasPriceWei: rational(32_000_000_000n),
+    gasUsed: 15_000_000n,
+    gasLimit: 30_000_000n,
+    utilization: rational(50n),
+    transactionCount: 1,
+    provider: 'alchemy',
     ...overrides,
   };
 }
