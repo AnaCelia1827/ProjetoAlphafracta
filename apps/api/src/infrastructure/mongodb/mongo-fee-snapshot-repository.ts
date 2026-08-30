@@ -53,7 +53,10 @@ type Cursor = z.infer<typeof CursorSchema>;
 
 export class InvalidHistoryCursorError extends InvalidQueryError {
   constructor() {
-    super([{ field: 'cursor', issue: 'The cursor is invalid or does not match the query' }]);
+    super(
+      [{ field: 'cursor', issue: 'The cursor is invalid or does not match the query' }],
+      'The fee history cursor is invalid or does not match the query',
+    );
     this.name = 'InvalidHistoryCursorError';
   }
 }

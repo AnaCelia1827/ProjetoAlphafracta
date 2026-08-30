@@ -68,8 +68,11 @@ export interface ApplicationErrorDetail {
 }
 
 export class InvalidQueryError extends ApplicationError {
-  constructor(readonly details?: ApplicationErrorDetail[]) {
-    super('INVALID_QUERY', 400, 'The request parameters are invalid');
+  constructor(
+    readonly details?: ApplicationErrorDetail[],
+    message = 'The request parameters are invalid',
+  ) {
+    super('INVALID_QUERY', 400, message);
   }
 }
 
