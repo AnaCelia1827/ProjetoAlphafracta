@@ -1,7 +1,7 @@
-import type { FeeSnapshot } from "@/types/fees";
+import type { FeeHistoryPoint, FeeSnapshot } from "@/types/fees";
 
 export const mockFeeSnapshot: FeeSnapshot = {
-  timestamp: "2026-08-25T15:42:15-03:00",
+  timestamp: new Date().toISOString(),
   metadata: { network: "ethereum-mainnet" },
   recommendedMaxFeeGwei: 32.4,
   recommendedPriorityFeeGwei: 1.8,
@@ -11,17 +11,21 @@ export const mockFeeSnapshot: FeeSnapshot = {
   sources: { mempool: "alchemy", price: "coinbase" },
 };
 
-export const mockFeeHistory = [
-  { time: "09:00", maxFeeGwei: 24.2, priorityFeeGwei: 1.2 },
-  { time: "09:30", maxFeeGwei: 25.8, priorityFeeGwei: 1.3 },
-  { time: "10:00", maxFeeGwei: 25.1, priorityFeeGwei: 1.4 },
-  { time: "10:30", maxFeeGwei: 29.6, priorityFeeGwei: 1.5 },
-  { time: "11:00", maxFeeGwei: 34.2, priorityFeeGwei: 1.7 },
-  { time: "11:30", maxFeeGwei: 35.7, priorityFeeGwei: 1.6 },
-  { time: "12:00", maxFeeGwei: 38.4, priorityFeeGwei: 1.9 },
-  { time: "12:30", maxFeeGwei: 42.1, priorityFeeGwei: 2.1 },
-  { time: "13:00", maxFeeGwei: 39.8, priorityFeeGwei: 1.8 },
-  { time: "13:30", maxFeeGwei: 37.6, priorityFeeGwei: 1.7 },
-  { time: "14:00", maxFeeGwei: 40.3, priorityFeeGwei: 1.8 },
-  { time: "14:30", maxFeeGwei: 32.4, priorityFeeGwei: 1.8 },
-];
+export const mockFeeHistory: FeeHistoryPoint[] = [
+  ["2026-08-25T09:00:00-03:00", 24.2, 1.2],
+  ["2026-08-25T09:30:00-03:00", 25.8, 1.3],
+  ["2026-08-25T10:00:00-03:00", 25.1, 1.4],
+  ["2026-08-25T10:30:00-03:00", 29.6, 1.5],
+  ["2026-08-25T11:00:00-03:00", 34.2, 1.7],
+  ["2026-08-25T11:30:00-03:00", 35.7, 1.6],
+  ["2026-08-25T12:00:00-03:00", 38.4, 1.9],
+  ["2026-08-25T12:30:00-03:00", 42.1, 2.1],
+  ["2026-08-25T13:00:00-03:00", 39.8, 1.8],
+  ["2026-08-25T13:30:00-03:00", 37.6, 1.7],
+  ["2026-08-25T14:00:00-03:00", 40.3, 1.8],
+  ["2026-08-25T14:30:00-03:00", 32.4, 1.8],
+].map(([timestamp, recommendedMaxFeeGwei, recommendedPriorityFeeGwei]) => ({
+  timestamp: String(timestamp),
+  recommendedMaxFeeGwei: Number(recommendedMaxFeeGwei),
+  recommendedPriorityFeeGwei: Number(recommendedPriorityFeeGwei),
+}));
