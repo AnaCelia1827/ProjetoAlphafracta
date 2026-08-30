@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express, { type Express } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import pino from 'pino';
 import { pinoHttp } from 'pino-http';
@@ -20,6 +20,7 @@ export interface ApiDependencies {
   getFeeHistory: FeeHistoryQueryUseCase;
   getRecentBlocks: RecentBlocksQuery;
   getBlockByIdentifier: BlockByIdentifierQuery;
+  liveSseHub: { handle(request: Request, response: Response): void };
 }
 
 export function createApp(dependencies?: ApiDependencies): Express {
@@ -46,6 +47,9 @@ export function createApp(dependencies?: ApiDependencies): Express {
   if (dependencies !== undefined) {
     app.use('/api/v1/fees', createFeeRouter(dependencies));
     app.use('/api/v1/blocks', createBlockRouter(dependencies));
+    app.get('/api/v1/live/stream', (request, response) => {
+      dependencies.liveSseHub.handle(request, response);
+    });
   }
 
   app.use(routeNotFoundMiddleware);

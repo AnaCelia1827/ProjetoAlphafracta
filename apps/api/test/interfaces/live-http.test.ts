@@ -28,6 +28,7 @@ function dependencies(): ApiDependencies {
     },
     getRecentBlocks: { execute: vi.fn(async () => [blockSummary(20_000_001n)]) },
     getBlockByIdentifier: { execute: vi.fn(async () => blockSummary(20_000_000n)) },
+    liveSseHub: { handle: vi.fn((_request, response) => response.status(200).end()) },
   };
 }
 
@@ -177,5 +178,16 @@ describe('live monitor REST API', () => {
       .send({ content: 'x'.repeat(40_000) });
     expect(oversized.status).toBe(400);
     expect(ApiErrorSchema.parse(oversized.body).error.code).toBe('INVALID_QUERY');
+  });
+
+  it('mounts only the unified live stream route', async () => {
+    const input = dependencies();
+    const live = await request(createApp(input)).get('/api/v1/live/stream');
+    const obsolete = await request(createApp(input)).get('/api/v1/fees/stream');
+
+    expect(live.status).toBe(200);
+    expect(input.liveSseHub.handle).toHaveBeenCalledTimes(1);
+    expect(obsolete.status).toBe(404);
+    expect(ApiErrorSchema.parse(obsolete.body).error.code).toBe('ROUTE_NOT_FOUND');
   });
 });

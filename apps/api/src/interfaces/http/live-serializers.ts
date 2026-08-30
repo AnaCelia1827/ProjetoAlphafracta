@@ -4,8 +4,10 @@ import type {
   EstimatedTransferCostDto,
   FeeSnapshotDto,
   FeeTrendDto,
+  LiveEventDto,
 } from '@alphractal/contracts';
 
+import type { LiveEvent } from '../../application/common/live-event-publisher.js';
 import type { BlockSummary, FinalityChange } from '../../domain/blocks/models.js';
 import type { EstimatedTransferCost, FeeSnapshot, FeeTrend } from '../../domain/fees/models.js';
 import { rational, type Rational } from '../../domain/shared/units.js';
@@ -115,5 +117,30 @@ export function serializeBlockStatusChange(change: FinalityChange): BlockStatusC
     number: change.number.toString(),
     hash: change.hash,
     finality: change.finality,
+  };
+}
+
+export function serializeLiveEvent(event: LiveEvent): LiveEventDto {
+  if (event.type === 'fee-snapshot') {
+    const data = serializeFeeSnapshot(event.snapshot);
+    return {
+      id: `fee:${data.timestamp}`,
+      event: event.type,
+      data: { data },
+    };
+  }
+  if (event.type === 'block-added') {
+    const data = serializeBlockSummary(event.block);
+    return {
+      id: `block:${data.number}:${data.hash}`,
+      event: event.type,
+      data: { data },
+    };
+  }
+  const data = serializeBlockStatusChange(event.change);
+  return {
+    id: `block-status:${data.number}:${data.finality}`,
+    event: event.type,
+    data: { data },
   };
 }
