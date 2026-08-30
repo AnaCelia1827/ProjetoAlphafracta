@@ -712,7 +712,7 @@ Cobrir:
 Run:
 
 ```bash
-rtk docker compose up -d mongodb
+rtk docker compose up --wait -d mongo
 rtk npm test --workspace @alphractal/api -- test/infrastructure/mongo-repositories.test.ts
 ```
 
@@ -762,7 +762,7 @@ rtk npm run lint --workspace @alphractal/api
 Expected: PASS. Ao final, manter o container somente se a próxima tarefa precisar dele; caso contrário:
 
 ```bash
-rtk docker compose stop mongodb
+rtk docker compose stop mongo
 ```
 
 - [ ] **Step 5: Commitar e enviar**
@@ -1311,7 +1311,7 @@ Expected: todos encerram com código 0.
 Com credenciais locais válidas e Mongo iniciado:
 
 ```bash
-rtk docker compose up -d mongodb
+rtk docker compose up --wait -d mongo
 rtk npm run dev:api
 ```
 
@@ -1334,7 +1334,7 @@ Expected:
 Parar processos de desenvolvimento e:
 
 ```bash
-rtk docker compose stop mongodb
+rtk docker compose stop mongo
 ```
 
 - [ ] **Step 4: Validar critérios de produto**
