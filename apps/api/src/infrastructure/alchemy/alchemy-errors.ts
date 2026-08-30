@@ -1,6 +1,8 @@
-export class AlchemyProviderUnavailableError extends Error {
+import { EthereumProviderUnavailableError } from '../../application/common/errors.js';
+
+export class AlchemyProviderUnavailableError extends EthereumProviderUnavailableError {
   constructor() {
-    super('Ethereum provider is unavailable');
+    super();
     this.name = 'AlchemyProviderUnavailableError';
   }
 }

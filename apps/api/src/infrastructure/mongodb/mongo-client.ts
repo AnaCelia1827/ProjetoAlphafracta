@@ -1,8 +1,10 @@
 import { type Db, MongoClient } from 'mongodb';
 
-export class MongoPersistenceUnavailableError extends Error {
+import { PersistenceUnavailableError } from '../../application/common/errors.js';
+
+export class MongoPersistenceUnavailableError extends PersistenceUnavailableError {
   constructor() {
-    super('MongoDB persistence is unavailable');
+    super();
     this.name = 'MongoPersistenceUnavailableError';
   }
 }
