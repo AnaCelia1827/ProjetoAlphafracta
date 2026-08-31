@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,7 +7,7 @@ export const metadata: Metadata = {
   description: "Monitoramento de taxas da rede Ethereum em tempo real.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
       <body>{children}</body>
