@@ -7,12 +7,21 @@ import {
   utcDateTimeSchema,
 } from './common.js';
 
+/**
+ * Camada: contrato público.
+ *
+ * Modela recomendações de taxa e seu histórico nas fronteiras REST e SSE. As
+ * uniões discriminadas obrigam o cliente a tratar preço e tendência ausentes
+ * antes de usar valores monetários derivados.
+ */
+/** Campos que toda estimativa de transferência nativa mantém, mesmo sem cotação. */
 const transferCostBase = {
   transactionType: z.literal('native-eth-transfer'),
   gasUnits: z.literal(21000),
   maxCostEth: nonNegativeFiniteSchema,
 };
 
+/** Representa custo convertido quando a cotação existe, distinguindo frescor. */
 const PricedTransferCostSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('fresh'),
@@ -30,6 +39,7 @@ const PricedTransferCostSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
+/** Permite omitir valores em USD de modo explícito quando não há cotação segura. */
 export const EstimatedTransferCostSchema = z.union([
   PricedTransferCostSchema,
   z.object({
@@ -38,6 +48,7 @@ export const EstimatedTransferCostSchema = z.union([
   }),
 ]);
 
+/** Expõe a comparação de cinco minutos ou explica por que ela não pôde ser feita. */
 export const FeeTrendSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('available'),
@@ -57,6 +68,7 @@ export const FeeTrendSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
+/** Enumera evidências que explicam o nível de confiança, sem inferência no cliente. */
 export const FeeConfidenceReasonSchema = z.enum([
   'fresh-data',
   'stable-fees',
@@ -67,11 +79,18 @@ export const FeeConfidenceReasonSchema = z.enum([
   'missing-data',
 ]);
 
+/** Agrupa o nível de confiança e as razões auditáveis que o determinaram. */
 export const FeeConfidenceSchema = z.object({
   level: z.enum(['high', 'medium', 'low', 'unavailable']),
   reasons: z.array(FeeConfidenceReasonSchema).min(1),
 });
 
+/**
+ * Contrato executável do snapshot atual ou reaproveitado.
+ *
+ * A regra cruzada impede que dados last-known aparentem confiança calculada
+ * com fontes que já não estão disponíveis.
+ */
 export const FeeSnapshotSchema = z
   .object({
     timestamp: utcDateTimeSchema,
@@ -116,10 +135,14 @@ export const FeeSnapshotSchema = z
     }
   });
 
+/** Envelopa o snapshot atual para manter a resposta HTTP extensível. */
 export const FeeCurrentResponseSchema = z.object({
   data: FeeSnapshotSchema,
 });
 
+/**
+ * Valida paginação temporal de histórico sem permitir um intervalo invertido.
+ */
 export const FeeHistoryQuerySchema = z
   .object({
     from: utcDateTimeSchema,
@@ -137,6 +160,9 @@ export const FeeHistoryQuerySchema = z
     }
   });
 
+/**
+ * Valida a página de histórico e vincula a presença do cursor ao sinal hasMore.
+ */
 export const FeeHistoryResponseSchema = z
   .object({
     data: z.array(FeeSnapshotSchema),
@@ -155,9 +181,15 @@ export const FeeHistoryResponseSchema = z
     }
   });
 
+/** Tipo serializado do custo estimado de transferência. */
 export type EstimatedTransferCostDto = z.infer<typeof EstimatedTransferCostSchema>;
+/** Tipo serializado da tendência de taxas. */
 export type FeeTrendDto = z.infer<typeof FeeTrendSchema>;
+/** Tipo serializado da confiança explicável da recomendação. */
 export type FeeConfidenceDto = z.infer<typeof FeeConfidenceSchema>;
+/** Tipo serializado do estado integral de taxas monitorado. */
 export type FeeSnapshotDto = z.infer<typeof FeeSnapshotSchema>;
+/** Tipo serializado da consulta de histórico aceita pela API. */
 export type FeeHistoryQueryDto = z.infer<typeof FeeHistoryQuerySchema>;
+/** Tipo serializado da página de histórico retornada pela API. */
 export type FeeHistoryResponseDto = z.infer<typeof FeeHistoryResponseSchema>;

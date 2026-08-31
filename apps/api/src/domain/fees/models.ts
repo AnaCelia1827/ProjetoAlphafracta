@@ -1,7 +1,15 @@
 import type { Rational } from '../shared/units.js';
 
+/**
+ * Camada: domínio de taxas.
+ *
+ * Define o vocabulário puro que une evidência Ethereum, mempool, preço e
+ * persistência. Nenhum tipo aqui conhece RPC, MongoDB ou formato HTTP.
+ */
+/** Hash tipado para impedir que texto comum seja usado como transação observada. */
 export type TransactionHash = `0x${string}`;
 
+/** Evidência de taxa vinda da rede Ethereum para uma recomendação calculável. */
 export interface FeeEvidence {
   latestBaseFeeWei: bigint;
   projectedNextBaseFeeWei: bigint;
@@ -9,6 +17,7 @@ export interface FeeEvidence {
   ethereumUpdatedAt: Date;
 }
 
+/** Lance pendente normalizado, conservando os campos que cada tipo suporta. */
 export interface PendingBid {
   hash: TransactionHash;
   observedAt: Date;
@@ -18,6 +27,7 @@ export interface PendingBid {
   gasPriceWei?: bigint;
 }
 
+/** Parâmetros auditáveis que definem como a recomendação de taxa é calculada. */
 export interface FeePolicy {
   mempoolWindowMs: number;
   feeHistoryBlockCount: number;
@@ -26,6 +36,7 @@ export interface FeePolicy {
   baseFeeHeadroomBasisPoints: number;
 }
 
+/** Política padrão: janela curta da mempool e teto EIP-1559 de 12,5%. */
 export const DEFAULT_FEE_POLICY = {
   mempoolWindowMs: 30_000,
   feeHistoryBlockCount: 10,
@@ -34,6 +45,7 @@ export const DEFAULT_FEE_POLICY = {
   baseFeeHeadroomBasisPoints: 1_125,
 } as const satisfies FeePolicy;
 
+/** Resultado interno da política antes de preço, confiança e serialização. */
 export interface FeeEstimate {
   latestBaseFeeWei: bigint;
   projectedNextBaseFeeWei: bigint;
@@ -43,17 +55,20 @@ export interface FeeEstimate {
   pendingEffectiveTipsWei: bigint[];
 }
 
+/** Cotação ETH/USD exata acompanhada do instante observado na fonte. */
 export interface PriceQuote {
   ethUsd: Rational;
   updatedAt: Date;
 }
 
+/** Campos comuns do custo de uma transferência ETH simples de 21.000 gas. */
 interface TransferCostBase {
   transactionType: 'native-eth-transfer';
   gasUnits: 21_000n;
   maxCostEth: Rational;
 }
 
+/** Custo convertido quando há cotação ou estado explícito de indisponibilidade. */
 export type EstimatedTransferCost =
   | (TransferCostBase & {
       status: 'fresh' | 'stale';
@@ -65,6 +80,7 @@ export type EstimatedTransferCost =
       status: 'unavailable';
     });
 
+/** Comparação recente de mediana que diferencia histórico insuficiente de falha. */
 export type FeeTrend =
   | {
       status: 'available';
@@ -83,6 +99,7 @@ export type FeeTrend =
       reason: 'history-unavailable';
     };
 
+/** Evidência humana e determinística que justifica a confiança calculada. */
 export type FeeConfidenceReason =
   | 'fresh-data'
   | 'stable-fees'
@@ -92,11 +109,13 @@ export type FeeConfidenceReason =
   | 'weak-sample'
   | 'missing-data';
 
+/** Nível final de confiança acompanhado das razões que o compõem. */
 export interface FeeConfidence {
   level: 'high' | 'medium' | 'low' | 'unavailable';
   reasons: FeeConfidenceReason[];
 }
 
+/** Estado completo monitorado, ainda em unidades exatas e objetos Date internos. */
 export interface FeeSnapshot {
   timestamp: Date;
   network: 'ethereum-mainnet';
@@ -123,6 +142,7 @@ export interface FeeSnapshot {
   };
 }
 
+/** Consulta de histórico já normalizada para a porta de persistência. */
 export interface FeeHistoryQuery {
   from: Date;
   to: Date;
@@ -130,11 +150,13 @@ export interface FeeHistoryQuery {
   cursor?: string;
 }
 
+/** Página de snapshots com cursor opaco para paginação temporal estável. */
 export interface FeeHistoryPage {
   data: FeeSnapshot[];
   nextCursor: string | null;
 }
 
+/** Limiares que convertem idade, amostra e volatilidade em confiança. */
 export interface ConfidencePolicy {
   freshSourceAgeMs: number;
   mediumSourceAgeMs: number;
@@ -145,6 +167,7 @@ export interface ConfidencePolicy {
   mediumRelativeIqr: Rational;
 }
 
+/** Política padrão que favorece dados recentes, amostras fortes e baixa dispersão. */
 export const DEFAULT_CONFIDENCE_POLICY = {
   freshSourceAgeMs: 10_000,
   mediumSourceAgeMs: 20_000,

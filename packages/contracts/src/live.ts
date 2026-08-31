@@ -3,6 +3,13 @@ import { z } from 'zod';
 import { BlockStatusChangedSchema, BlockSummarySchema } from './blocks.js';
 import { FeeSnapshotSchema } from './fees.js';
 
+/**
+ * Camada: contrato público.
+ *
+ * Descreve os eventos SSE autorizados. Cada refinamento recalcula o ID
+ * determinístico para que reconexões e deduplicação sejam confiáveis.
+ */
+/** Evento de uma nova recomendação, identificado pelo instante do snapshot. */
 const FeeSnapshotEventSchema = z
   .object({
     id: z.string().min(1),
@@ -15,6 +22,7 @@ const FeeSnapshotEventSchema = z
     }
   });
 
+/** Evento de chegada de bloco, identificado por número e hash canônicos. */
 const BlockAddedEventSchema = z
   .object({
     id: z.string().min(1),
@@ -28,6 +36,7 @@ const BlockAddedEventSchema = z
     }
   });
 
+/** Evento de promoção de finality, distinto da chegada ou troca de bloco. */
 const BlockStatusChangedEventSchema = z
   .object({
     id: z.string().min(1),
@@ -41,10 +50,12 @@ const BlockStatusChangedEventSchema = z
     }
   });
 
+/** União dos eventos que o cliente SSE precisa tratar de forma discriminada. */
 export const LiveEventSchema = z.union([
   FeeSnapshotEventSchema,
   BlockAddedEventSchema,
   BlockStatusChangedEventSchema,
 ]);
 
+/** Tipo serializado de qualquer evento transmitido no stream ao vivo. */
 export type LiveEventDto = z.infer<typeof LiveEventSchema>;
