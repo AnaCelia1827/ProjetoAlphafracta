@@ -8,16 +8,31 @@ import {
 import type { FeeTrend } from './models.js';
 import type { FeeSnapshotRepository } from './ports.js';
 
+/**
+ * Camada: domínio de taxas.
+ *
+ * Compara a mediana de max fee da janela corrente com a janela equivalente de
+ * 24 horas antes, mantendo insuficiência de histórico distinta de falha do repo.
+ */
+/** Duração da janela curta exibida pelo contrato de tendência. */
 const WINDOW_MS = 5 * 60 * 1_000;
+/** Deslocamento temporal que posiciona a janela de comparação em um dia antes. */
 const DAY_MS = 24 * 60 * 60 * 1_000;
 
+/** Sinal tipado de que histórico não pode ser consultado sem derrubar o snapshot. */
 export class FeeHistoryUnavailableError extends Error {
+  /** Cria o erro reconhecido pela aplicação ao degradar a tendência. */
   constructor() {
     super('Fee history is unavailable');
     this.name = 'FeeHistoryUnavailableError';
   }
 }
 
+/**
+ * Calcula a variação percentual entre duas medianas de cinco minutos separadas
+ * por 24 horas. Histórico vazio, ou referência zero, é insuficiente; somente a
+ * indisponibilidade conhecida do repositório vira status unavailable.
+ */
 export async function calculateTrend24h(input: {
   now: Date;
   repository: Pick<FeeSnapshotRepository, 'findWindow'>;

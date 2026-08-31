@@ -8,20 +8,34 @@ import type {
   NormalizedBlockTransaction,
 } from './models.js';
 
+/**
+ * Camada: domínio de blocos.
+ *
+ * Converte um bloco normalizado em resumo calculado, validando os invariantes
+ * que tornam métricas de taxa e ocupação significativas antes de publicá-las.
+ */
+/** Erro explícito para blocos anteriores a EIP-1559, sem base fee analisável. */
 export class UnsupportedPreEip1559BlockError extends Error {
+  /** Cria o erro estável convertido na borda HTTP para resposta compreensível. */
   constructor() {
     super('Block does not contain an EIP-1559 base fee');
     this.name = 'UnsupportedPreEip1559BlockError';
   }
 }
 
+/** Erro para dados de bloco que violam limites físicos de gas da própria rede. */
 export class MalformedBlockError extends Error {
+  /** Preserva a explicação específica da inconsistência detectada na análise. */
   constructor(message: string) {
     super(message);
     this.name = 'MalformedBlockError';
   }
 }
 
+/**
+ * Calcula gorjeta efetiva de uma transação e descarta campos incompatíveis ou
+ * incapazes de cobrir a base fee para não enviesar a mediana do bloco.
+ */
 function effectiveTip(transaction: NormalizedBlockTransaction, baseFeeWei: bigint): bigint | null {
   if (transaction.kind === 'eip1559') {
     const maxFee = transaction.maxFeePerGasWei;
@@ -38,6 +52,12 @@ function effectiveTip(transaction: NormalizedBlockTransaction, baseFeeWei: bigin
   return gasPrice - baseFeeWei;
 }
 
+/**
+ * Valida e resume um bloco EIP-1559 usando mediana das gorjetas válidas.
+ *
+ * O resumo conserva valores exatos e já recebe finality/classificação da
+ * aplicação, permitindo que a regra de cálculo permaneça independente de I/O.
+ */
 export function analyzeBlock(
   block: NormalizedBlock,
   classification: {

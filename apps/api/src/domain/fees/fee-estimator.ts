@@ -8,6 +8,13 @@ import {
   type FeeEvidence,
 } from './models.js';
 
+/**
+ * Camada: domínio de taxas.
+ *
+ * Converte evidência da rede e lances recentes em uma recomendação EIP-1559
+ * exata. Dados incompletos são recusados para não publicar uma taxa inventada.
+ */
+/** Agrupa as dependências já coletadas para calcular uma recomendação pura. */
 export interface EstimateFeesInput {
   evidence: FeeEvidence;
   pendingBids: PendingBid[];
@@ -15,6 +22,12 @@ export interface EstimateFeesInput {
   policy?: FeePolicy;
 }
 
+/**
+ * Extrai a gorjeta efetivamente pagável por uma transação EIP-1559 ou legacy.
+ *
+ * Retorna null para lances inválidos ou incapazes de cobrir a base fee, que não
+ * devem contaminar o percentil usado pela política.
+ */
 function effectiveTip(bid: PendingBid, baseFeeWei: bigint): bigint | null {
   if (bid.kind === 'eip1559') {
     const maxFee = bid.maxFeePerGasWei;
@@ -41,11 +54,19 @@ function effectiveTip(bid: PendingBid, baseFeeWei: bigint): bigint | null {
   return gasPrice - baseFeeWei;
 }
 
+/** Mantém apenas observações do passado dentro da janela ativa da mempool. */
 function isInsideWindow(observedAt: Date, now: Date, windowMs: number): boolean {
   const ageMs = now.getTime() - observedAt.getTime();
   return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= windowMs;
 }
 
+/**
+ * Estima prioridade pelo P60 da mempool e pela mediana histórica, então aplica
+ * ao maior base fee conhecido uma margem de 12,5% definida pela política.
+ *
+ * Retorna null quando não existe amostra pendente utilizável ou a evidência de
+ * base fee é inválida; a aplicação decide como degradar nesse caso.
+ */
 export function estimateFees(input: EstimateFeesInput): FeeEstimate | null {
   const { evidence, pendingBids, now } = input;
   const policy = input.policy ?? DEFAULT_FEE_POLICY;
