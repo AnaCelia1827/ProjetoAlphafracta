@@ -3,8 +3,9 @@
 import type {
   BlockSummaryDto,
   FeeSnapshotDto,
+  LiveEventDto,
 } from "@alphractal/contracts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
 import { ApiClientError } from "@/lib/api/errors";
 import { fetchCurrentFee } from "@/lib/api/fetch-current-fee";
@@ -46,6 +47,11 @@ function isAbortError(reason: unknown) {
 }
 
 export function useLiveMonitor(): UseLiveMonitorResult {
+  const bootstrapControllerRef = useRef<AbortController | null>(null);
+  const bootstrapInFlightRef = useRef(false);
+  const pendingLiveEventsRef = useRef<LiveEventDto[]>([]);
+  const streamOpenRef = useRef(false);
+  const resourceErrorsRef = useRef({ fee: false, blocks: false });
   const [liveState, setLiveState] = useState<LiveMonitorState>({
     fee: apiConfig.useMockData ? mockFeeSnapshot : null,
     blocks: apiConfig.useMockData ? mockRecentBlocks : [],
@@ -77,54 +83,91 @@ export function useLiveMonitor(): UseLiveMonitorResult {
       return;
     }
 
-    setBootstrapLoading(true);
-
-    const [feeResult, blocksResult] = await Promise.allSettled([
-      fetchCurrentFee(signal),
-      fetchRecentBlocks(20, signal),
-    ]);
-
     if (signal?.aborted) {
       return;
     }
 
-    let nextFee: FeeSnapshotDto | undefined;
-    let nextBlocks: BlockSummaryDto[] | undefined;
-    let degraded = false;
-
-    if (feeResult.status === "fulfilled") {
-      nextFee = feeResult.value;
-      setFeeError(null);
-    } else if (!isAbortError(feeResult.reason)) {
-      degraded = true;
-      setFeeError(
-        asApiClientError(feeResult.reason, "Falha ao carregar as taxas."),
-      );
+    bootstrapControllerRef.current?.abort();
+    const controller = new AbortController();
+    bootstrapControllerRef.current = controller;
+    const abortFromCaller = () => controller.abort();
+    if (signal?.aborted) {
+      controller.abort();
+    } else {
+      signal?.addEventListener("abort", abortFromCaller, { once: true });
     }
 
-    if (blocksResult.status === "fulfilled") {
-      nextBlocks = blocksResult.value;
-      setBlocksError(null);
-    } else if (!isAbortError(blocksResult.reason)) {
-      degraded = true;
-      setBlocksError(
-        asApiClientError(blocksResult.reason, "Falha ao carregar os blocos."),
-      );
-    }
+    bootstrapInFlightRef.current = true;
+    pendingLiveEventsRef.current = [];
+    setBootstrapLoading(true);
 
-    if (nextFee !== undefined || nextBlocks !== undefined) {
-      setLiveState((current) => ({
-        fee: nextFee ?? current.fee,
-        blocks: nextBlocks ?? current.blocks,
-      }));
-    }
+    try {
+      const [feeResult, blocksResult] = await Promise.allSettled([
+        fetchCurrentFee(controller.signal),
+        fetchRecentBlocks(controller.signal),
+      ]);
 
-    if (degraded) {
-      setConnection((current) =>
-        current === "offline" ? current : "degraded",
-      );
+      if (
+        controller.signal.aborted ||
+        bootstrapControllerRef.current !== controller
+      ) {
+        return;
+      }
+
+      let nextFee: FeeSnapshotDto | undefined;
+      let nextBlocks: BlockSummaryDto[] | undefined;
+      let degraded = false;
+
+      if (feeResult.status === "fulfilled") {
+        nextFee = feeResult.value;
+        resourceErrorsRef.current.fee = false;
+        setFeeError(null);
+      } else if (!isAbortError(feeResult.reason)) {
+        degraded = true;
+        resourceErrorsRef.current.fee = true;
+        setFeeError(
+          asApiClientError(feeResult.reason, "Falha ao carregar as taxas."),
+        );
+      }
+
+      if (blocksResult.status === "fulfilled") {
+        nextBlocks = blocksResult.value;
+        resourceErrorsRef.current.blocks = false;
+        setBlocksError(null);
+      } else if (!isAbortError(blocksResult.reason)) {
+        degraded = true;
+        resourceErrorsRef.current.blocks = true;
+        setBlocksError(
+          asApiClientError(blocksResult.reason, "Falha ao carregar os blocos."),
+        );
+      }
+
+      if (nextFee !== undefined || nextBlocks !== undefined) {
+        const eventsToReplay = [...pendingLiveEventsRef.current];
+        setLiveState((current) =>
+          eventsToReplay.reduce(reduceLiveEvent, {
+            fee: nextFee ?? current.fee,
+            blocks: nextBlocks ?? current.blocks,
+          }),
+        );
+      }
+
+      if (degraded) {
+        setConnection((current) =>
+          current === "offline" ? current : "degraded",
+        );
+      } else if (streamOpenRef.current) {
+        setConnection("live");
+      }
+    } finally {
+      signal?.removeEventListener("abort", abortFromCaller);
+      if (bootstrapControllerRef.current === controller) {
+        bootstrapControllerRef.current = null;
+        bootstrapInFlightRef.current = false;
+        pendingLiveEventsRef.current = [];
+        setBootstrapLoading(false);
+      }
     }
-    setBootstrapLoading(false);
   }, []);
 
   useEffect(() => {
@@ -134,15 +177,16 @@ export function useLiveMonitor(): UseLiveMonitorResult {
 
     const controller = new AbortController();
     let openedOnce = false;
+    queueMicrotask(() => void bootstrap(controller.signal));
     const stream = new EventSource(apiConfig.streamUrl);
 
-    const bootstrapTimer = window.setTimeout(
-      () => void bootstrap(controller.signal),
-      0,
-    );
-
     const handleOpen = () => {
-      setConnection("live");
+      streamOpenRef.current = true;
+      setConnection(
+        resourceErrorsRef.current.fee || resourceErrorsRef.current.blocks
+          ? "degraded"
+          : "live",
+      );
       if (openedOnce) {
         void bootstrap(controller.signal);
       }
@@ -158,21 +202,33 @@ export function useLiveMonitor(): UseLiveMonitorResult {
           message.lastEventId,
           JSON.parse(message.data) as unknown,
         );
+        if (bootstrapInFlightRef.current) {
+          pendingLiveEventsRef.current.push(parsed);
+        }
         setLiveState((current) => reduceLiveEvent(current, parsed));
 
         if (parsed.event === "fee-snapshot") {
+          resourceErrorsRef.current.fee = false;
           setFeeError(null);
         } else {
+          resourceErrorsRef.current.blocks = false;
           setBlocksError(null);
         }
+        setConnection(
+          resourceErrorsRef.current.fee || resourceErrorsRef.current.blocks
+            ? "degraded"
+            : "live",
+        );
       } catch (reason) {
         const error = asApiClientError(
           reason,
           "A API enviou um evento ao vivo inválido.",
         );
         if (eventName === "fee-snapshot") {
+          resourceErrorsRef.current.fee = true;
           setFeeError(error);
         } else {
+          resourceErrorsRef.current.blocks = true;
           setBlocksError(error);
         }
         setConnection("degraded");
@@ -182,9 +238,14 @@ export function useLiveMonitor(): UseLiveMonitorResult {
     const handleFee = handleEvent("fee-snapshot");
     const handleBlockAdded = handleEvent("block-added");
     const handleBlockStatus = handleEvent("block-status-changed");
-    const handleError = () =>
+    const handleError = () => {
+      streamOpenRef.current = false;
       setConnection(navigator.onLine ? "degraded" : "offline");
-    const handleOffline = () => setConnection("offline");
+    };
+    const handleOffline = () => {
+      streamOpenRef.current = false;
+      setConnection("offline");
+    };
     const handleOnline = () => setConnection("connecting");
 
     stream.addEventListener("open", handleOpen);
@@ -196,8 +257,9 @@ export function useLiveMonitor(): UseLiveMonitorResult {
     window.addEventListener("online", handleOnline);
 
     return () => {
-      window.clearTimeout(bootstrapTimer);
       controller.abort();
+      bootstrapControllerRef.current?.abort();
+      streamOpenRef.current = false;
       stream.close();
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);

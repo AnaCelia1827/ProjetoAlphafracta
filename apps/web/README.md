@@ -1,43 +1,59 @@
 # Alphractal Fees — frontend
 
-Frontend Next.js do painel de monitoramento de taxas Ethereum. O navegador
-consome somente a API Express; Alchemy, Coinbase e MongoDB pertencem ao backend.
+Dashboard Next.js do monitoramento de taxas e blocos da Ethereum Mainnet. O
+navegador usa somente rotas same-origin em `/api/v1`; o servidor Next encaminha
+essas requisições para a API Express.
 
-## Executar com dados simulados
+## Configuração local
 
-```powershell
-Copy-Item .env.example .env.local
-npm.cmd install
-npm.cmd run dev
-```
-
-A aplicação estará em `http://localhost:3000`. O arquivo de exemplo já habilita
-os mocks, portanto o backend não é necessário para visualizar a interface.
-
-## Conectar ao backend
-
-Configure `.env.local`:
+Copie `.env.example` para `.env.local` e defina:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001
+API_SERVER_URL=http://localhost:3001
 NEXT_PUBLIC_USE_MOCK_DATA=false
-NEXT_PUBLIC_ENABLE_RECENT_BLOCKS=false
 ```
 
-O frontend está preparado para estes contratos:
+`API_SERVER_URL` é lida apenas pelo servidor Next e é obrigatória em produção.
+O navegador nunca recebe a origem interna do backend. Mocks ficam desligados
+por padrão, só podem ser ativados em desenvolvimento/teste e mostram um selo
+`Demo` na interface.
 
-- `GET /stream`: SSE com `FeeSnapshot` em mensagens padrão ou evento `snapshot`.
-- `GET /fees/history?from=<ISO>&to=<ISO>`: `{ "items": FeeHistoryPoint[] }`.
-- `GET /blocks/recent?limit=5`: `{ "items": RecentBlock[] }`, opcional.
+Na raiz do monorepo:
 
-O endpoint de histórico e o de blocos também aceitam uma lista direta durante a
-fase de integração. Para ativar blocos, defina
-`NEXT_PUBLIC_ENABLE_RECENT_BLOCKS=true`.
+```bash
+npm install
+npm run dev:api
+npm run dev:web
+```
+
+A API fica em `http://localhost:3001` e o dashboard em
+`http://localhost:3000`.
+
+## Contratos consumidos
+
+Todos os envelopes são validados por `@alphractal/contracts`:
+
+- `GET /api/v1/fees/current`
+- `GET /api/v1/fees/history?from=<ISO>&to=<ISO>&limit=5000&cursor=<cursor>`
+- `GET /api/v1/blocks/recent?limit=20`
+- `GET /api/v1/blocks/:numberOrHash`
+- `GET /api/v1/live/stream`
+
+O stream registra somente os eventos nomeados `fee-snapshot`, `block-added` e
+`block-status-changed`. Depois de uma reconexão, o cliente atualiza novamente
+as taxas atuais e a janela de blocos por REST.
 
 ## Comandos
 
-- `npm.cmd run dev`: servidor de desenvolvimento.
-- `npm.cmd run lint`: análise estática.
-- `npm.cmd run typecheck`: validação TypeScript.
-- `npm.cmd run build`: build de produção.
-- `npm.cmd run start`: executa o build de produção.
+Execute a partir da raiz:
+
+- `npm run dev:web`: servidor de desenvolvimento do frontend.
+- `npm run lint --workspace web`: análise estática.
+- `npm run typecheck --workspace web`: validação TypeScript isolada.
+- `npm run test --workspace web -- --pool=forks --poolOptions.forks.maxForks=2`:
+  testes unitários e integração com Express.
+- `API_SERVER_URL=http://localhost:3001 npm run build --workspace web`: build de
+  produção.
+
+O `package-lock.json` da raiz é a única autoridade de dependências npm do
+monorepo.

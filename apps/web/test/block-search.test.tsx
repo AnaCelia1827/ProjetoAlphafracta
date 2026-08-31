@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DashboardFilters } from "@/components/dashboard-filters";
 import { fetchBlock } from "@/lib/api/fetch-block";
@@ -12,19 +13,26 @@ describe("block search", () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
 
-    render(
-      <DashboardFilters
-        rangeHours={24}
-        search=""
-        onRangeChange={vi.fn()}
-        onSearch={onSearch}
-      />,
-    );
+    function Harness() {
+      const [search, setSearch] = useState("");
+      return (
+        <DashboardFilters
+          rangeHours={24}
+          search={search}
+          onRangeChange={vi.fn()}
+          onSearchChange={setSearch}
+          onSearch={onSearch}
+        />
+      );
+    }
+
+    render(<Harness />);
 
     await user.type(screen.getByRole("searchbox"), "23548192");
     expect(onSearch).not.toHaveBeenCalled();
     await user.keyboard("{Enter}");
     expect(onSearch).toHaveBeenCalledWith("23548192");
+    expect(screen.getByRole("searchbox")).toHaveFocus();
   });
 
   it("validates identifiers before calling the API", async () => {

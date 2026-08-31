@@ -17,10 +17,12 @@ export function useFeeHistory(hours = 6) {
   const requestKey = `${hours}:${requestVersion}`;
   const [result, setResult] = useState<{
     requestKey: string;
+    hours: number;
     history: FeeHistoryPoint[];
     error: string | null;
   }>({
     requestKey: apiConfig.useMockData ? requestKey : "",
+    hours,
     history: apiConfig.useMockData ? mockFeeHistory : [],
     error: null,
   });
@@ -38,13 +40,14 @@ export function useFeeHistory(hours = 6) {
 
     void fetchAllFeeHistory(from, to, controller.signal)
       .then((items) => {
-        setResult({ requestKey, history: items, error: null });
+        setResult({ requestKey, hours, history: items, error: null });
       })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
         setResult((current) => ({
           requestKey,
-          history: current.history,
+          hours,
+          history: current.hours === hours ? current.history : [],
           error:
             reason instanceof Error
               ? reason.message
@@ -60,7 +63,9 @@ export function useFeeHistory(hours = 6) {
   return {
     history: apiConfig.useMockData
       ? filterMockHistory(hours)
-      : result.history,
+      : result.hours === hours
+        ? result.history
+        : [],
     loading: pending,
     error: pending ? null : result.error,
     refresh,

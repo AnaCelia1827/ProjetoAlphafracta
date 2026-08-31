@@ -140,7 +140,7 @@
 .disconnected{background:var(--color-danger)}
 .reconnecting{background:var(--color-primary);color:var(--color-text)}
 .nav a:focus-visible,.sectionState button:focus-visible,.blockRow:focus-visible,.share:focus-visible,.analyze:focus-visible,.backToLive:focus-visible,.filterControls select:focus-visible,.filterControls input:focus-visible{outline-color:var(--color-focus)}
-.fresh{color:var(--color-primary)}
+.fresh{color:var(--color-primary-text)}
 .warning{color:var(--color-warning)}
 .errorMessage,.inlineError{color:var(--color-danger)}
 .legend i,.legend i:nth-child(2),.progressRow b:after{background:var(--color-primary)}
@@ -164,7 +164,11 @@
 .sourceStatusGrid dd{font-size:11px;font-weight:700}
 .backToLive{min-height:42px;border:0;border-radius:999px;font:inherit;font-weight:700;cursor:pointer}
 .shareNotice{grid-column:1/-1;margin-top:8px;color:var(--color-success);font-size:11px;text-align:right}
+.blockError{padding:11px 13px;border:1px solid color-mix(in srgb,var(--color-danger) 45%,transparent);border-radius:12px;background:color-mix(in srgb,var(--color-danger) 10%,transparent);color:var(--color-danger);font-size:11px;line-height:1.45}
+.searchStatus{padding:11px 13px;border:1px solid color-mix(in srgb,var(--color-primary-text) 38%,transparent);border-radius:12px;background:color-mix(in srgb,var(--color-primary) 10%,transparent);color:var(--color-primary-text);font-size:11px;line-height:1.45}
 .detailCards{grid-template-columns:1fr 1fr}
 .share{border-color:var(--color-border)}
 
 @media(max-width:640px){.headerStatus{gap:6px}.demoBadge{padding:6px 8px;font-size:9px}.networkBadge{flex:1;justify-content:center}.recommendationMeta,.sourceStatusGrid{grid-template-columns:1fr}.detailCards{grid-template-columns:1fr}.filterControls .filterSearch{display:flex}.filterSearch{flex-basis:100%}}
+
+@media(max-width:1024px){.sourceStatusGrid{grid-template-columns:1fr}}

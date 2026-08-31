@@ -24,7 +24,6 @@ export default function Home() {
   const history = useFeeHistory(rangeHours);
 
   const searchBlock = (identifier: string) => {
-    setBlockSearchValue(identifier);
     void blockSearch.search(identifier);
   };
 
@@ -38,10 +37,10 @@ export default function Home() {
       <DashboardHeader status={live.connection} demo={apiConfig.useMockData} />
       <main className={styles.page} id="dashboard">
         <DashboardFilters
-          key={blockSearchValue}
           rangeHours={rangeHours}
           search={blockSearchValue}
           onRangeChange={setRangeHours}
+          onSearchChange={setBlockSearchValue}
           onSearch={searchBlock}
         />
         <section className={styles.summary} id="live">
@@ -62,7 +61,8 @@ export default function Home() {
           blocks={live.blocks}
           searchedBlock={blockSearch.searchedBlock}
           onBackToLive={backToLive}
-          loading={live.bootstrapLoading || blockSearch.searching}
+          loading={live.bootstrapLoading}
+          searching={blockSearch.searching}
           error={blockSearch.error ?? live.blocksError?.message ?? null}
           onRefresh={() => void live.refresh()}
         />

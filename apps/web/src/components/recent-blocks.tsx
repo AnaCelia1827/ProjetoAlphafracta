@@ -11,6 +11,7 @@ type Props = {
   searchedBlock: BlockViewModel | null;
   onBackToLive: () => void;
   loading?: boolean;
+  searching?: boolean;
   error?: string | null;
   onRefresh?: () => void;
 };
@@ -42,19 +43,25 @@ export function RecentBlocks({
   searchedBlock,
   onBackToLive,
   loading = false,
+  searching = false,
   error = null,
   onRefresh,
 }: Props) {
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
-  const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<{
+    hash: string;
+    message: string;
+  } | null>(null);
 
-  if (loading && blocks.length === 0 && !searchedBlock) {
+  if ((loading || searching) && blocks.length === 0 && !searchedBlock) {
     return (
       <section
         id="recent-blocks"
         className={`${styles.panel} ${styles.recentBlocksPanel}`}
       >
-        <p className={styles.sectionState}>Carregando blocos…</p>
+        <p className={styles.sectionState} role="status">
+          {searching ? "Buscando bloco…" : "Carregando blocos…"}
+        </p>
       </section>
     );
   }
@@ -95,13 +102,19 @@ export function RecentBlocks({
         throw new Error("Web Share indisponível");
       }
       await navigator.share(data);
-      setShareNotice("Compartilhado");
-    } catch {
+      setShareNotice({ hash: selected.hash, message: "Compartilhado" });
+    } catch (reason) {
+      if (reason instanceof DOMException && reason.name === "AbortError") {
+        return;
+      }
       try {
         await navigator.clipboard.writeText(selected.etherscanUrl);
-        setShareNotice("Link copiado");
+        setShareNotice({ hash: selected.hash, message: "Link copiado" });
       } catch {
-        setShareNotice("Não foi possível compartilhar");
+        setShareNotice({
+          hash: selected.hash,
+          message: "Não foi possível compartilhar",
+        });
       }
     }
   };
@@ -111,8 +124,19 @@ export function RecentBlocks({
       id="recent-blocks"
       className={styles.blocksPanel}
       aria-label="Histórico de blocos"
+      aria-busy={searching}
     >
       <aside className={styles.blockList} aria-label="Blocos recentes">
+        {searching && (
+          <p className={styles.searchStatus} role="status">
+            Buscando bloco…
+          </p>
+        )}
+        {error && (
+          <p className={styles.blockError} role="alert">
+            {error}
+          </p>
+        )}
         {searchedBlock && (
           <button
             className={styles.backToLive}
@@ -232,9 +256,9 @@ export function RecentBlocks({
               Analisar bloco
             </button>
           </div>
-          {shareNotice && (
+          {shareNotice?.hash === selected.hash && (
             <p className={styles.shareNotice} role="status">
-              {shareNotice}
+              {shareNotice.message}
             </p>
           )}
         </footer>

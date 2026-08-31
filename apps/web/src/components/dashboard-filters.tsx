@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
 import styles from "@/app/page.module.css";
 import type { HistoryRangeHours } from "@/types/fees";
 
@@ -9,6 +8,7 @@ type Props = {
   rangeHours: HistoryRangeHours;
   search: string;
   onRangeChange: (hours: HistoryRangeHours) => void;
+  onSearchChange: (search: string) => void;
   onSearch: (search: string) => void;
 };
 
@@ -16,12 +16,11 @@ export function DashboardFilters({
   rangeHours,
   search,
   onRangeChange,
+  onSearchChange,
   onSearch,
 }: Props) {
-  const [draft, setDraft] = useState(search);
-
   const submitSearch = () => {
-    const value = draft.trim();
+    const value = search.trim();
     if (value) {
       onSearch(value);
       document
@@ -63,8 +62,8 @@ export function DashboardFilters({
             type="search"
             placeholder="Buscar bloco ou hash..."
             aria-label="Buscar blocos"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
           />
           <button
             className={styles.filterSearchButton}

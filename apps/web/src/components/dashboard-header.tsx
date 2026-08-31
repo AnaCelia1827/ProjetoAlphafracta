@@ -72,9 +72,9 @@ export function DashboardHeader({
       />
     </div>
     <nav className={styles.nav}>
-      <a className={activeItem === "dashboard" ? styles.active : ""} href="#recent-blocks" onClick={() => setActiveItem("dashboard")}><NavIcon name="dashboard" />Dashboard</a>
-      <a className={activeItem === "history" ? styles.active : ""} href="#history" onClick={() => setActiveItem("history")}><NavIcon name="history" />Histórico</a>
-      <a className={activeItem === "live" ? styles.active : ""} href="#live" onClick={() => setActiveItem("live")}><NavIcon name="live" />Monitor ao vivo</a>
+      <a className={activeItem === "dashboard" ? styles.active : ""} href="#recent-blocks" aria-current={activeItem === "dashboard" ? "location" : undefined} onClick={() => setActiveItem("dashboard")}><NavIcon name="dashboard" />Dashboard</a>
+      <a className={activeItem === "history" ? styles.active : ""} href="#history" aria-current={activeItem === "history" ? "location" : undefined} onClick={() => setActiveItem("history")}><NavIcon name="history" />Histórico</a>
+      <a className={activeItem === "live" ? styles.active : ""} href="#live" aria-current={activeItem === "live" ? "location" : undefined} onClick={() => setActiveItem("live")}><NavIcon name="live" />Monitor ao vivo</a>
     </nav>
     <div className={styles.headerStatus}>
       {demo && <span className={styles.demoBadge}>Demo</span>}

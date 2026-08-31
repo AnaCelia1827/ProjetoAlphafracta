@@ -55,4 +55,67 @@ describe("recent block actions", () => {
     expect(writeText).toHaveBeenCalledWith(blockViewFixture.etherscanUrl);
     expect(await screen.findByText("Link copiado")).toBeVisible();
   });
+
+  it("does not overwrite the clipboard when native sharing is cancelled", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: vi.fn().mockRejectedValue(new DOMException("cancelled", "AbortError")),
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(
+      <RecentBlocks
+        blocks={[blockViewFixture]}
+        searchedBlock={null}
+        onBackToLive={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /compartilhar bloco/i }));
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByText("Link copiado")).not.toBeInTheDocument();
+  });
+
+  it("shows a search error without hiding the live blocks", () => {
+    render(
+      <RecentBlocks
+        blocks={[blockViewFixture]}
+        searchedBlock={null}
+        onBackToLive={vi.fn()}
+        error="Informe um número de bloco ou hash Ethereum válido."
+      />,
+    );
+
+    expect(
+      screen.getByText("Informe um número de bloco ou hash Ethereum válido."),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`#${blockViewFixture.number}`),
+      }),
+    ).toBeVisible();
+  });
+
+  it("announces an in-flight search without hiding the live blocks", () => {
+    render(
+      <RecentBlocks
+        blocks={[blockViewFixture]}
+        searchedBlock={null}
+        onBackToLive={vi.fn()}
+        searching
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Buscando bloco");
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`#${blockViewFixture.number}`),
+      }),
+    ).toBeVisible();
+  });
 });

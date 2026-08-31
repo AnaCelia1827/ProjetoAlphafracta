@@ -33,4 +33,23 @@ describe("fetchJson", () => {
       requestId: "req-1",
     });
   });
+
+  it("turns a stalled request into a localized timeout error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((_input, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+      ),
+    );
+
+    const error = await fetchJson("/api/v1/fees/current", z.unknown(), undefined, 5).catch(
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toBeInstanceOf(ApiClientError);
+    expect(error).toMatchObject({ status: 408 });
+    expect((error as Error).message).toMatch(/tempo limite/i);
+  });
 });

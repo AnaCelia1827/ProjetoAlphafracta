@@ -55,6 +55,14 @@ class FakeEventSource {
 const fetchCurrentFeeMock = vi.mocked(fetchCurrentFee);
 const fetchRecentBlocksMock = vi.mocked(fetchRecentBlocks);
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
+
 beforeEach(() => {
   FakeEventSource.instances = [];
   fetchCurrentFeeMock.mockResolvedValue(feeSnapshotFixture);
@@ -112,5 +120,74 @@ describe("useLiveMonitor", () => {
 
     unmount();
     expect(stream.closed).toBe(true);
+  });
+
+  it("replays SSE events received while an older REST bootstrap is pending", async () => {
+    const feeRequest = deferred<typeof feeSnapshotFixture>();
+    const blocksRequest = deferred<(typeof blockFixture)[]>();
+    fetchCurrentFeeMock.mockReturnValueOnce(feeRequest.promise);
+    fetchRecentBlocksMock.mockReturnValueOnce(blocksRequest.promise);
+
+    const { result } = renderHook(() => useLiveMonitor());
+    await waitFor(() => expect(fetchCurrentFeeMock).toHaveBeenCalledTimes(1));
+    const stream = FakeEventSource.instances[0]!;
+    const liveFee = {
+      ...feeSnapshotFixture,
+      timestamp: "2026-08-31T03:02:00.000Z",
+      recommendedMaxFeeGwei: 55,
+    };
+    const liveBlock = {
+      ...blockFixture,
+      number: "23548193",
+      hash: `0x${"b".repeat(64)}`,
+      timestamp: "2026-08-31T03:02:00.000Z",
+      etherscanUrl: "https://etherscan.io/block/23548193",
+    };
+
+    act(() => {
+      stream.emit(
+        "fee-snapshot",
+        new MessageEvent("fee-snapshot", {
+          data: JSON.stringify({ data: liveFee }),
+          lastEventId: `fee:${liveFee.timestamp}`,
+        }),
+      );
+      stream.emit(
+        "block-added",
+        new MessageEvent("block-added", {
+          data: JSON.stringify({ data: liveBlock }),
+          lastEventId: `block:${liveBlock.number}:${liveBlock.hash}`,
+        }),
+      );
+      feeRequest.resolve(feeSnapshotFixture);
+      blocksRequest.resolve([blockFixture]);
+    });
+
+    await waitFor(() => expect(result.current.bootstrapLoading).toBe(false));
+    expect(result.current.fee?.recommendedMaxFeeGwei).toBe(55);
+    expect(result.current.blocks[0]?.number).toBe("23548193");
+  });
+
+  it("keeps a partial bootstrap degraded until the missing resource recovers", async () => {
+    fetchCurrentFeeMock.mockRejectedValueOnce(new Error("fee unavailable"));
+
+    const { result } = renderHook(() => useLiveMonitor());
+    await waitFor(() => expect(result.current.bootstrapLoading).toBe(false));
+    expect(result.current.connection).toBe("degraded");
+
+    const stream = FakeEventSource.instances[0]!;
+    act(() => stream.emit("open"));
+    expect(result.current.connection).toBe("degraded");
+
+    act(() => {
+      stream.emit(
+        "fee-snapshot",
+        new MessageEvent("fee-snapshot", {
+          data: JSON.stringify({ data: feeSnapshotFixture }),
+          lastEventId: `fee:${feeSnapshotFixture.timestamp}`,
+        }),
+      );
+    });
+    expect(result.current.connection).toBe("live");
   });
 });
