@@ -6,15 +6,24 @@ import type { EthereumFeeSource } from '../../domain/fees/ports.js';
 import type { Clock } from '../../domain/shared/clock.js';
 import { AlchemyProviderUnavailableError } from './alchemy-errors.js';
 
+/**
+ * Camada: infraestrutura Alchemy.
+ *
+ * Adapta a chamada HTTP de fee history para a porta EthereumFeeSource. Falhas,
+ * respostas incompletas e detalhes da biblioteca viram um único erro tipado.
+ */
+/** Configuração de transporte e tempo injetável do cliente de evidência de taxa. */
 export interface AlchemyFeeClientOptions {
   httpUrl: string;
   clock: Clock;
   timeoutMs: number;
 }
 
+/** Cliente HTTP que normaliza fee history em valores bigint do domínio. */
 export class AlchemyFeeClient implements EthereumFeeSource {
   private readonly client;
 
+  /** Cria transporte com rede e timeout fixados pelo runtime. */
   constructor(private readonly options: AlchemyFeeClientOptions) {
     this.client = createPublicClient({
       chain: mainnet,
@@ -22,6 +31,10 @@ export class AlchemyFeeClient implements EthereumFeeSource {
     });
   }
 
+  /**
+   * Busca base fee atual/projetada e recompensas P60, registrando o horário de
+   * observação local. Não deixa payload ou erro do provedor escapar à aplicação.
+   */
   async getFeeEvidence(): Promise<FeeEvidence> {
     try {
       const history = await this.client.getFeeHistory({

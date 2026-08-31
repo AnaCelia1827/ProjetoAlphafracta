@@ -14,12 +14,21 @@ import type { EthereumBlockSource } from '../../domain/blocks/ports.js';
 import { AlchemyProviderUnavailableError } from './alchemy-errors.js';
 import { ReconnectingWebSocket } from './reconnecting-websocket.js';
 
+/**
+ * Camada: infraestrutura Alchemy.
+ *
+ * Traduz RPC HTTP e assinatura newHeads em modelos de bloco independentes do
+ * provedor. Erros de parse e transporte são normalizados para a aplicação
+ * decidir quando degradar, sem registrar endpoints ou payloads sensíveis.
+ */
+/** Campos de taxa de uma transação retornada pelo RPC de bloco completo. */
 interface RpcTransaction {
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;
   gasPrice?: string;
 }
 
+/** Subconjunto do bloco RPC necessário às métricas de fee, gas e finality. */
 interface RpcBlock {
   number: string | null;
   hash: string | null;
@@ -30,6 +39,7 @@ interface RpcBlock {
   transactions: Array<string | RpcTransaction>;
 }
 
+/** Configuração HTTP, WebSocket e reconexão do adaptador de blocos. */
 export interface AlchemyBlockClientOptions {
   httpUrl: string;
   wsUrl?: string;
@@ -39,10 +49,12 @@ export interface AlchemyBlockClientOptions {
   heartbeatMs?: number;
 }
 
+/** Converte quantidade RPC hexadecimal/decimal para BigInt sem arredondamento. */
 function parseQuantity(value: string): bigint {
   return BigInt(value);
 }
 
+/** Preserva somente transações com campos suficientes para calcular gorjeta efetiva. */
 function normalizeTransaction(
   transaction: string | RpcTransaction,
 ): NormalizedBlockTransaction | null {
@@ -63,6 +75,11 @@ function normalizeTransaction(
   return null;
 }
 
+/**
+ * Valida identidade de bloco e converte valores RPC para o modelo de domínio.
+ * Blocos sem número/hash íntegros são indisponibilidade do provedor, não dados
+ * parcialmente publicáveis.
+ */
 function normalizeBlock(block: RpcBlock): NormalizedBlock {
   if (block.number === null || block.hash === null || !/^0x[a-fA-F0-9]{64}$/.test(block.hash)) {
     throw new AlchemyProviderUnavailableError();
@@ -84,15 +101,18 @@ function normalizeBlock(block: RpcBlock): NormalizedBlock {
   };
 }
 
+/** Deriva apenas número e hash de uma resposta safe/finalized já normalizada. */
 function normalizeHead(block: RpcBlock): FinalityHead {
   const normalized = normalizeBlock({ ...block, transactions: [] });
   return { number: normalized.number, hash: normalized.hash };
 }
 
+/** Adaptador Ethereum que atende leitura, finality e stream de novas cabeças. */
 export class AlchemyBlockClient implements EthereumBlockSource {
   private readonly client;
   private headSocket: ReconnectingWebSocket | null = null;
 
+  /** Cria cliente HTTP; o WebSocket é iniciado sob demanda pelo runtime. */
   constructor(private readonly options: AlchemyBlockClientOptions) {
     this.client = createPublicClient({
       chain: mainnet,
@@ -100,6 +120,7 @@ export class AlchemyBlockClient implements EthereumBlockSource {
     });
   }
 
+  /** Busca por altura ou hash e retorna null apenas para bloco legitimamente ausente. */
   async getBlock(identifier: BlockIdentifier): Promise<NormalizedBlock | null> {
     try {
       const block =
@@ -119,6 +140,7 @@ export class AlchemyBlockClient implements EthereumBlockSource {
     }
   }
 
+  /** Consulta a altura mais nova sem cache para preencher uma janela inicial atual. */
   async getLatestBlockNumber(): Promise<bigint> {
     try {
       return await this.client.getBlockNumber({ cacheTime: 0 });
@@ -127,6 +149,7 @@ export class AlchemyBlockClient implements EthereumBlockSource {
     }
   }
 
+  /** Obtém safe e finalized em paralelo para promover status monotonicamente. */
   async getFinalityHeads(): Promise<FinalityHeads> {
     try {
       const [safe, finalized] = await Promise.all([
@@ -152,6 +175,10 @@ export class AlchemyBlockClient implements EthereumBlockSource {
     }
   }
 
+  /**
+   * Assina novas cabeças quando WebSocket está configurado; chamadas repetidas
+   * são ignoradas para não criar streams concorrentes para o mesmo runtime.
+   */
   start(onHead: (head: FinalityHead) => void): void {
     if (this.options.wsUrl === undefined || this.headSocket !== null) return;
     this.headSocket = new ReconnectingWebSocket({
@@ -196,6 +223,7 @@ export class AlchemyBlockClient implements EthereumBlockSource {
     this.headSocket.start();
   }
 
+  /** Encerra o stream de cabeças e libera referência para permitir reinicialização. */
   stop(): void {
     this.headSocket?.stop();
     this.headSocket = null;

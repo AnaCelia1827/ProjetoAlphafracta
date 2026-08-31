@@ -14,14 +14,25 @@ import type { FeeSnapshotRepository } from '../../domain/fees/ports.js';
 import { rational, type Rational } from '../../domain/shared/units.js';
 import { MongoPersistenceUnavailableError, type MongoDatabaseProvider } from './mongo-client.js';
 
+/**
+ * Camada: infraestrutura MongoDB.
+ *
+ * Persiste snapshots atuais em coleção time-series e entrega histórico paginado
+ * por cursor opaco. Converte BigInt e razões em representação segura para BSON,
+ * preservando precisão e impedindo que snapshots last-known virem evidência.
+ */
+/** Nome fixo da coleção time-series de recomendações de taxa. */
 const COLLECTION_NAME = 'fee_snapshots';
+/** Retenção de trinta dias aplicada pelo TTL da coleção. */
 const RETENTION_SECONDS = 2_592_000;
 
+/** Forma persistida de uma razão, pois BSON não representa BigInt diretamente. */
 interface RationalDocument {
   numerator: string;
   denominator: string;
 }
 
+/** Documento Mongo que guarda somente um snapshot de recomendação current. */
 interface FeeSnapshotDocument {
   _id?: ObjectId;
   timestamp: Date;
@@ -40,6 +51,7 @@ interface FeeSnapshotDocument {
   status: FeeSnapshot['status'];
 }
 
+/** Valida versão e vínculo da paginação para rejeitar cursores adulterados ou cruzados. */
 const CursorSchema = z.object({
   v: z.literal(1),
   from: z.string().datetime(),
@@ -49,9 +61,12 @@ const CursorSchema = z.object({
   afterId: z.string().regex(/^[a-fA-F0-9]{24}$/),
 });
 
+/** Cursor interno decodificado usado como continuação estável da ordenação Mongo. */
 type Cursor = z.infer<typeof CursorSchema>;
 
+/** Erro de cursor inválido que a rota converte em erro de consulta recuperável. */
 export class InvalidHistoryCursorError extends InvalidQueryError {
+  /** Cria detalhes seguros sem expor conteúdo nem formato interno do cursor. */
   constructor() {
     super(
       [{ field: 'cursor', issue: 'The cursor is invalid or does not match the query' }],
@@ -61,6 +76,7 @@ export class InvalidHistoryCursorError extends InvalidQueryError {
   }
 }
 
+/** Serializa BigInt em texto para manter a fração exata em documento BSON. */
 function serializeRational(value: Rational): RationalDocument {
   return {
     numerator: value.numerator.toString(),
@@ -68,11 +84,13 @@ function serializeRational(value: Rational): RationalDocument {
   };
 }
 
+/** Reconstrói e normaliza razão recebida do armazenamento. */
 function deserializeRational(value: unknown): Rational {
   const document = value as RationalDocument;
   return rational(BigInt(document.numerator), BigInt(document.denominator));
 }
 
+/** Persiste união de custo sem supor presença de cotação USD. */
 function serializeTransferCost(value: EstimatedTransferCost): Record<string, unknown> {
   const base = {
     status: value.status,
@@ -90,6 +108,7 @@ function serializeTransferCost(value: EstimatedTransferCost): Record<string, unk
   };
 }
 
+/** Recria união de custo mantendo o estado indisponível explicitamente discriminado. */
 function deserializeTransferCost(value: Record<string, unknown>): EstimatedTransferCost {
   const base = {
     transactionType: 'native-eth-transfer' as const,
@@ -109,6 +128,7 @@ function deserializeTransferCost(value: Record<string, unknown>): EstimatedTrans
   };
 }
 
+/** Serializa tendência disponível com razões exatas e preserva estados sem dados. */
 function serializeTrend(value: FeeTrend): Record<string, unknown> {
   if (value.status !== 'available') return { ...value };
   return {
@@ -120,6 +140,7 @@ function serializeTrend(value: FeeTrend): Record<string, unknown> {
   };
 }
 
+/** Reconstitui o estado de tendência sem transformar ausência em valor numérico. */
 function deserializeTrend(value: Record<string, unknown>): FeeTrend {
   if (value.status === 'insufficient-history') {
     return { status: 'insufficient-history', windowMinutes: 5 };
@@ -140,6 +161,10 @@ function deserializeTrend(value: Record<string, unknown>): FeeTrend {
   };
 }
 
+/**
+ * Converte somente snapshots atuais para persistência. Rejeitar last-known
+ * protege o histórico de representar uma nova observação que nunca ocorreu.
+ */
 function serializeSnapshot(snapshot: FeeSnapshot): FeeSnapshotDocument {
   if (snapshot.recommendationState !== 'current') {
     throw new TypeError('Only current fee snapshots can be serialized');
@@ -162,6 +187,7 @@ function serializeSnapshot(snapshot: FeeSnapshot): FeeSnapshotDocument {
   };
 }
 
+/** Recompõe o modelo de domínio de um documento armazenado para leitura e cálculo. */
 function deserializeSnapshot(document: FeeSnapshotDocument): FeeSnapshot {
   return {
     timestamp: document.timestamp,
@@ -181,10 +207,12 @@ function deserializeSnapshot(document: FeeSnapshotDocument): FeeSnapshot {
   };
 }
 
+/** Codifica cursor versionado em texto opaco, sem expor detalhes na API pública. */
 function encodeCursor(cursor: Cursor): string {
   return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
 }
 
+/** Decodifica e valida cursor, rejeitando qualquer valor corrompido como consulta inválida. */
 function decodeCursor(encoded: string): Cursor {
   try {
     return CursorSchema.parse(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
@@ -193,13 +221,20 @@ function decodeCursor(encoded: string): Cursor {
   }
 }
 
+/** Repositório Mongo de snapshots com falhas traduzidas para semântica da aplicação. */
 export class MongoFeeSnapshotRepository implements FeeSnapshotRepository {
+  /** Recebe gerenciador que controla conexão e disponibilidade compartilhadas. */
   constructor(private readonly manager: MongoDatabaseProvider) {}
 
+  /** Obtém a coleção somente quando o gerenciador confirma conexão saudável. */
   private collection(): Collection<FeeSnapshotDocument> {
     return this.manager.database().collection<FeeSnapshotDocument>(COLLECTION_NAME);
   }
 
+  /**
+   * Cria a coleção time-series uma única vez, com metadado de rede e expiração
+   * de trinta dias. Qualquer falha torna o armazenamento degradado para o runtime.
+   */
   async initialize(): Promise<void> {
     try {
       const database = this.manager.database();
@@ -221,6 +256,7 @@ export class MongoFeeSnapshotRepository implements FeeSnapshotRepository {
     }
   }
 
+  /** Insere apenas observações current e traduz falha de escrita para persistência indisponível. */
   async insert(snapshot: FeeSnapshot): Promise<void> {
     if (snapshot.recommendationState !== 'current') return;
     try {
@@ -230,6 +266,7 @@ export class MongoFeeSnapshotRepository implements FeeSnapshotRepository {
     }
   }
 
+  /** Recupera última observação para bootstrap do cache, em ordem temporal decrescente. */
   async findLatest(): Promise<FeeSnapshot | null> {
     try {
       const document = await this.collection().findOne(
@@ -242,6 +279,7 @@ export class MongoFeeSnapshotRepository implements FeeSnapshotRepository {
     }
   }
 
+  /** Lê intervalo inclusivo ordenado usado na comparação de tendência. */
   async findWindow(from: Date, to: Date): Promise<FeeSnapshot[]> {
     try {
       const documents = await this.collection()
@@ -257,6 +295,10 @@ export class MongoFeeSnapshotRepository implements FeeSnapshotRepository {
     }
   }
 
+  /**
+   * Pagina por timestamp e ObjectId, vinculando cursor a intervalo e limite para
+   * evitar que ele seja reutilizado em uma consulta com ordenação incompatível.
+   */
   async findPage(query: FeeHistoryQuery): Promise<FeeHistoryPage> {
     try {
       const filter: Filter<FeeSnapshotDocument> = {
@@ -311,16 +353,19 @@ export class MongoFeeSnapshotRepository implements FeeSnapshotRepository {
     }
   }
 
+  /** Repassa disponibilidade do gerenciador sem fazer uma consulta ao banco. */
   isAvailable(): boolean {
     return this.manager.isAvailable();
   }
 
+  /** Marca conexão indisponível e preserva erro de escrita já normalizado. */
   private fail(error: unknown): never {
     this.manager.markUnavailable();
     if (error instanceof MongoPersistenceUnavailableError) throw error;
     throw new MongoPersistenceUnavailableError();
   }
 
+  /** Converte falhas de leitura em erro de histórico, mantendo cursor inválido distinto. */
   private failHistory(error: unknown): never {
     this.manager.markUnavailable();
     if (error instanceof InvalidHistoryCursorError) throw error;

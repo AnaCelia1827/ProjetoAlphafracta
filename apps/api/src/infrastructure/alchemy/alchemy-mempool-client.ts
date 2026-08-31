@@ -5,6 +5,14 @@ import type { MempoolSource } from '../../domain/fees/ports.js';
 import type { Clock } from '../../domain/shared/clock.js';
 import { ReconnectingWebSocket } from './reconnecting-websocket.js';
 
+/**
+ * Camada: infraestrutura Alchemy.
+ *
+ * Assina transações pendentes, normaliza somente campos de taxa necessários e
+ * deduplica por hash em memória. Mensagens malformadas são descartadas para que
+ * um frame inválido não interrompa o fluxo de monitoramento.
+ */
+/** Configura o WebSocket da mempool e sua política de reconexão. */
 export interface AlchemyMempoolClientOptions {
   wsUrl: string;
   clock: Clock;
@@ -13,6 +21,7 @@ export interface AlchemyMempoolClientOptions {
   heartbeatMs?: number;
 }
 
+/** Subconjunto não confiável da transação pendente recebido pela assinatura. */
 interface PendingTransactionPayload {
   hash?: string;
   maxFeePerGas?: string;
@@ -20,6 +29,7 @@ interface PendingTransactionPayload {
   gasPrice?: string;
 }
 
+/** Converte quantidade RPC não negativa, omitindo valores ausentes ou ilegíveis. */
 function quantity(value: string | undefined): bigint | undefined {
   if (value === undefined) return undefined;
   try {
@@ -30,11 +40,13 @@ function quantity(value: string | undefined): bigint | undefined {
   }
 }
 
+/** Fonte de mempool em memória que implementa a porta pura do domínio. */
 export class AlchemyMempoolClient implements MempoolSource {
   private readonly bids = new Map<TransactionHash, PendingBid>();
   private readonly socket: ReconnectingWebSocket;
   private lastUpdatedAt: Date | null = null;
 
+  /** Configura assinatura pendente e encaminha frames para a normalização segura. */
   constructor(private readonly options: AlchemyMempoolClientOptions) {
     this.socket = new ReconnectingWebSocket({
       url: options.wsUrl,
@@ -55,14 +67,20 @@ export class AlchemyMempoolClient implements MempoolSource {
     });
   }
 
+  /** Inicia a conexão e a assinatura após o runtime estar pronto. */
   start(): void {
     this.socket.start();
   }
 
+  /** Encerra conexão e timers sem apagar a amostra já coletada. */
   stop(): void {
     this.socket.stop();
   }
 
+  /**
+   * Descarta amostras vencidas e devolve lances ordenados pelo instante de
+   * observação, preservando a janela solicitada pelo domínio.
+   */
   getPendingBids(since: Date): PendingBid[] {
     for (const [hash, bid] of this.bids) {
       if (bid.observedAt < since) this.bids.delete(hash);
@@ -72,10 +90,15 @@ export class AlchemyMempoolClient implements MempoolSource {
     );
   }
 
+  /** Informa a última mensagem válida que tornou a fonte utilizável. */
   updatedAt(): Date | null {
     return this.lastUpdatedAt;
   }
 
+  /**
+   * Valida e normaliza um frame de assinatura; exceções de JSON são isoladas
+   * porque um único payload ruim não deve derrubar um socket que será reutilizado.
+   */
   private receive(message: string): void {
     try {
       const payload = JSON.parse(message) as {

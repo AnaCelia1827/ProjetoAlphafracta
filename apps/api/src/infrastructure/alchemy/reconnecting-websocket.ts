@@ -1,7 +1,16 @@
 import WebSocket from 'ws';
 
+/**
+ * Camada: infraestrutura compartilhada.
+ *
+ * Gerencia ciclo de vida WebSocket com heartbeat, backoff exponencial e jitter.
+ * Ele não interpreta protocolo de negócio: clientes fornecem inscrição e parse
+ * para que falhas de conexão possam ser recuperadas de modo reutilizável.
+ */
+/** Estados observáveis do transporte para testes e diagnóstico de ciclo de vida. */
 export type ReconnectingWebSocketState = 'idle' | 'connecting' | 'open' | 'backoff' | 'stopped';
 
+/** Callbacks e limites que especializam uma conexão reconectável. */
 export interface ReconnectingWebSocketOptions {
   url: string;
   onOpen(socket: WebSocket): void;
@@ -12,6 +21,7 @@ export interface ReconnectingWebSocketOptions {
   jitter?: (delayMs: number) => number;
 }
 
+/** Transporte reconectável que mantém no máximo um socket e um timer de cada tipo. */
 export class ReconnectingWebSocket {
   private socket: WebSocket | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -20,17 +30,24 @@ export class ReconnectingWebSocket {
   private alive = false;
   private currentState: ReconnectingWebSocketState = 'idle';
 
+  /** Recebe protocolo de aplicação e a política configurável de reconexão. */
   constructor(private readonly options: ReconnectingWebSocketOptions) {}
 
+  /** Expõe estado sem permitir que o consumidor altere o ciclo de vida interno. */
   state(): ReconnectingWebSocketState {
     return this.currentState;
   }
 
+  /** Inicia somente a partir de idle, evitando múltiplas conexões por engano. */
   start(): void {
     if (this.currentState !== 'idle') return;
     this.connect();
   }
 
+  /**
+   * Cancela timers e fecha o socket de modo idempotente, bloqueando reconexões
+   * iniciadas por eventos close posteriores.
+   */
   stop(): void {
     this.currentState = 'stopped';
     if (this.reconnectTimer !== null) clearTimeout(this.reconnectTimer);
@@ -42,6 +59,7 @@ export class ReconnectingWebSocket {
     if (socket !== null) socket.close();
   }
 
+  /** Abre socket, delega mensagens e agenda recuperação após fechamento inesperado. */
   private connect(): void {
     if (this.currentState === 'stopped') return;
     this.currentState = 'connecting';
@@ -76,6 +94,7 @@ export class ReconnectingWebSocket {
     });
   }
 
+  /** Detecta conexão silenciosamente morta com ping/pong antes de reconectar. */
   private startHeartbeat(socket: WebSocket): void {
     const heartbeatMs = this.options.heartbeatMs ?? 15_000;
     this.heartbeatTimer = setInterval(() => {
@@ -89,6 +108,7 @@ export class ReconnectingWebSocket {
     }, heartbeatMs);
   }
 
+  /** Agenda próxima tentativa com backoff limitado e jitter para evitar reconexões em massa. */
   private scheduleReconnect(): void {
     this.currentState = 'backoff';
     const base = this.options.reconnectBaseDelayMs ?? 500;

@@ -6,12 +6,23 @@ import type { BlockIdentifier, BlockSummary } from '../../domain/blocks/models.j
 import type { EthereumBlockSource, ObservedBlockRepository } from '../../domain/blocks/ports.js';
 import type { RecentBlockWindow } from '../../domain/blocks/recent-block-window.js';
 
+/**
+ * Camada: aplicação de blocos.
+ *
+ * Busca, analisa, classifica e publica um bloco observado. Reorg é detectado na
+ * janela pela mesma altura com hash novo; persistência falha de modo degradado,
+ * mas inconsistência do provedor ainda é propagada.
+ */
+/** Duração da referência histórica usada para classificar preço do bloco. */
 const CONTEXT_WINDOW_MS = 60 * 60 * 1_000;
 
+/** Capacidade de disparar atualização de taxas após chegada de novo bloco. */
 export interface FeeMonitorTrigger {
+  /** Solicita atualização coalescente do monitor de taxas. */
   trigger(): Promise<void>;
 }
 
+/** Colaboradores externos necessários para observar e publicar um bloco. */
 export interface ObserveBlockDependencies {
   repository: ObservedBlockRepository;
   window: RecentBlockWindow;
@@ -20,9 +31,15 @@ export interface ObserveBlockDependencies {
   feeMonitor: FeeMonitorTrigger;
 }
 
+/** Caso de uso que incorpora um bloco na janela sem acoplar análise a RPC. */
 export class ObserveBlock {
+  /** Recebe fonte, memória, persistência, SSE e o gatilho de taxa. */
   constructor(private readonly dependencies: ObserveBlockDependencies) {}
 
+  /**
+   * Observa a identidade solicitada, persiste canonicidade quando possível e
+   * notifica SSE. Busca pontual pode desligar o gatilho para não gerar cascata.
+   */
   async execute(
     identifier: BlockIdentifier,
     options: { triggerFeeMonitor?: boolean } = {},
@@ -58,6 +75,10 @@ export class ObserveBlock {
     return summary;
   }
 
+  /**
+   * Prefere o histórico canônico persistido; em degradação usa a janela local
+   * anterior ao bloco para preservar uma classificação honesta, ainda que menor.
+   */
   private async comparisonBlocks(timestamp: Date): Promise<BlockSummary[]> {
     const from = new Date(timestamp.getTime() - CONTEXT_WINDOW_MS);
     if (this.dependencies.repository.isAvailable()) {

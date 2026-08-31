@@ -5,12 +5,20 @@ import type { BlockFinality, FinalityChange } from '../../domain/blocks/models.j
 import type { EthereumBlockSource, ObservedBlockRepository } from '../../domain/blocks/ports.js';
 import type { RecentBlockWindow } from '../../domain/blocks/recent-block-window.js';
 
+/**
+ * Camada: aplicação de blocos.
+ *
+ * Promove finality de blocos já observados com base nas cabeças da rede. Nunca
+ * rebaixa um status: isso preserva o contrato monotônico mesmo diante de atrasos.
+ */
+/** Ordem usada para impedir que uma atualização reduza finality já publicada. */
 const FINALITY_RANK: Record<BlockFinality, number> = {
   latest: 0,
   safe: 1,
   finalized: 2,
 };
 
+/** Colaboradores para consultar cabeças, persistir promoções e avisar assinantes. */
 export interface UpdateBlockFinalityDependencies {
   source: EthereumBlockSource;
   repository: ObservedBlockRepository;
@@ -18,9 +26,15 @@ export interface UpdateBlockFinalityDependencies {
   publisher: LiveEventPublisher;
 }
 
+/** Caso de uso que aplica em lote apenas promoções de finality à janela atual. */
 export class UpdateBlockFinality {
+  /** Recebe dependências que mantêm estado e divulgam mudanças observadas. */
   constructor(private readonly dependencies: UpdateBlockFinalityDependencies) {}
 
+  /**
+   * Consulta cabeças, calcula promoções e persiste quando possível. Falha do
+   * provedor conhecida gera lista vazia para que o monitor se recupere depois.
+   */
   async execute(): Promise<FinalityChange[]> {
     let heads;
     try {

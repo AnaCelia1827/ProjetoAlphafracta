@@ -17,25 +17,41 @@ import type {
 } from '../../domain/fees/ports.js';
 import type { Clock } from '../../domain/shared/clock.js';
 
+/**
+ * Camada: aplicação de taxas.
+ *
+ * Orquestra evidência Ethereum, mempool, preço, tendência, persistência e SSE
+ * em um snapshot. Se uma fonte obrigatória falha, só reaproveita o último valor
+ * válido e o marca como last-known; nunca persiste esse estado degradado.
+ */
+/** Janela local de lances considerada pela política aplicada neste caso de uso. */
 const MEMPOOL_WINDOW_MS = 30_000;
+/** Idade que ainda torna uma fonte obrigatória atual para o status externo. */
 const FRESH_REQUIRED_SOURCE_MS = 10_000;
+/** Idade após a qual uma fonte obrigatória deixa de sustentar recomendação atual. */
 const UNAVAILABLE_REQUIRED_SOURCE_MS = 30_000;
+/** Idade máxima para apresentar uma cotação auxiliar como atual. */
 const FRESH_PRICE_MS = 30_000;
 
+/** Vocabulário comum dos status de fonte expostos pelo snapshot. */
 type SourceStatus = 'fresh' | 'stale' | 'unavailable';
 
+/** Cache em processo do último snapshot publicável, inclusive para fallback seguro. */
 export class FeeSnapshotCache {
   private snapshot: FeeSnapshot | null = null;
 
+  /** Lê o último snapshot sem consultar rede ou banco. */
   get(): FeeSnapshot | null {
     return this.snapshot;
   }
 
+  /** Substitui o snapshot reutilizável somente por estado já construído pelo caso de uso. */
   set(snapshot: FeeSnapshot): void {
     this.snapshot = snapshot;
   }
 }
 
+/** Dependências injetadas que delimitam I/O e permitem exercitar a orquestração em teste. */
 export interface CalculateFeeSnapshotDependencies {
   clock: Clock;
   ethereumFeeSource: EthereumFeeSource;
@@ -46,10 +62,12 @@ export interface CalculateFeeSnapshotDependencies {
   publisher: LiveEventPublisher;
 }
 
+/** Calcula idade sem valores negativos quando relógios das fontes divergem. */
 function ageMs(updatedAt: Date, now: Date): number {
   return Math.max(0, now.getTime() - updatedAt.getTime());
 }
 
+/** Classifica frescor de fonte obrigatória, cuja ausência impede recomendação atual. */
 function requiredSourceStatus(updatedAt: Date | undefined, now: Date): SourceStatus {
   if (updatedAt === undefined) return 'unavailable';
   const age = ageMs(updatedAt, now);
@@ -58,11 +76,13 @@ function requiredSourceStatus(updatedAt: Date | undefined, now: Date): SourceSta
   return 'unavailable';
 }
 
+/** Classifica apenas a cotação auxiliar, sem invalidar a taxa se ela estiver ausente. */
 function priceStatus(quote: PriceQuote | null, now: Date): SourceStatus {
   if (quote === null) return 'unavailable';
   return ageMs(quote.updatedAt, now) <= FRESH_PRICE_MS ? 'fresh' : 'stale';
 }
 
+/** Retém a idade do dado obrigatório mais antigo, ou força indisponibilidade se faltar um. */
 function recommendationAge(
   mempoolUpdatedAt: Date | undefined,
   ethereumUpdatedAt: Date | undefined,
@@ -75,9 +95,15 @@ function recommendationAge(
   return Math.max(...timestamps.map((value) => ageMs(value, now)));
 }
 
+/** Caso de uso que produz, persiste quando possível e transmite um snapshot de taxa. */
 export class CalculateFeeSnapshot {
+  /** Recebe colaboradores para obter dados, guardar estado e publicar o resultado. */
   constructor(private readonly dependencies: CalculateFeeSnapshotDependencies) {}
 
+  /**
+   * Calcula um snapshot atual. Falha Ethereum ou mempool insuficiente delega ao
+   * fallback last-known; falha de persistência somente sinaliza status degradado.
+   */
   async execute(): Promise<FeeSnapshot> {
     let evidence;
     try {
@@ -157,6 +183,11 @@ export class CalculateFeeSnapshot {
     return snapshot;
   }
 
+  /**
+   * Reemite o último snapshot com idade acumulada e confiança indisponível.
+   *
+   * Não grava o valor, preservando o histórico como evidência de dados atuais.
+   */
   private publishLastKnown(now: Date): FeeSnapshot {
     const previous = this.dependencies.cache.get();
     if (previous === null) throw new SnapshotUnavailableError();
