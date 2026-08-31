@@ -1,15 +1,14 @@
-export type RecentBlock = {
-  number: number;
+export type BlockViewModel = {
+  number: string;
   hash: string;
   timestamp: string;
-  transactionCount: number;
+  finality: "latest" | "safe" | "finalized";
+  feeLevel: "low" | "normal" | "elevated" | "high" | "unavailable";
   baseFeeGwei: number;
-  priorityFeeGwei?: number;
-  status?: "confirmed" | "pending";
-  condition?: "normal" | "elevated";
-  provider?: "alchemy";
-};
-
-export type RecentBlocksResponse = {
-  items: RecentBlock[];
+  priorityFeeGwei: number;
+  effectiveGasPriceGwei: number;
+  utilizationPercent: number;
+  transactionCount: number;
+  provider: "alchemy";
+  etherscanUrl: string;
 };

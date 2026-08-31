@@ -1,3 +1,8 @@
+import type {
+  FeeConfidenceDto,
+  FeeTrendDto,
+} from "@alphractal/contracts";
+
 export type ConnectionStatus =
   | "connecting"
   | "connected"
@@ -6,40 +11,32 @@ export type ConnectionStatus =
 
 export type DataStatus = "fresh" | "stale" | "unavailable";
 
-export type NetworkFilter = "all" | "ethereum-mainnet";
 export type HistoryRangeHours = 1 | 6 | 24;
 
-export type ServiceStatus =
-  | "connected"
-  | "reconnecting"
-  | "stale"
-  | "unavailable";
-
-export type ServiceHealth = {
-  mempool: ServiceStatus;
-  price: ServiceStatus;
-  persistence: ServiceStatus;
-};
-
-export type FeeSnapshot = {
+export type FeeViewModel = {
   timestamp: string;
-  metadata: { network: "ethereum-mainnet" };
+  recommendationState: "current" | "last-known";
   recommendedMaxFeeGwei: number;
   recommendedPriorityFeeGwei: number;
-  ethUsd: number;
+  baseFeeGwei: number;
+  effectiveGasPriceGwei: number;
+  maxCostEth: number;
+  maxCostUsd?: number;
+  priceStatus: "fresh" | "stale" | "unavailable";
+  trend: FeeTrendDto;
+  confidence: FeeConfidenceDto;
   sampleSize: number;
   dataAgeMs: number;
-  sources: { mempool: "alchemy"; price: "coinbase" };
-  health?: ServiceHealth;
+  status: {
+    mempool: string;
+    ethereum: string;
+    price: string;
+    persistence: string;
+  };
 };
 
-export type FeeHistoryPoint = Pick<
-  FeeSnapshot,
-  | "timestamp"
-  | "recommendedMaxFeeGwei"
-  | "recommendedPriorityFeeGwei"
->;
-
-export type FeeHistoryResponse = {
-  items: FeeHistoryPoint[];
+export type FeeHistoryPoint = {
+  timestamp: string;
+  recommendedMaxFeeGwei: number;
+  recommendedPriorityFeeGwei: number;
 };
