@@ -10,6 +10,7 @@
     "lint": "eslint src test"
   },
   "dependencies": {
+    "@alphractal/contracts": "file:../../packages/contracts",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",

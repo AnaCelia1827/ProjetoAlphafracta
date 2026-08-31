@@ -1,3 +1,7 @@
+/**
+ * Testes de carregamento de .env: confirmam que a raiz do monorepo é localizada
+ * sem depender do diretório de trabalho e que ambiente injetado é respeitado.
+ */
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

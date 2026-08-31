@@ -1,3 +1,7 @@
+/**
+ * Teste de interface HTTP: verifica que a aplicação mínima mantém health
+ * independente de adaptadores externos, como base para health checks de deploy.
+ */
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
