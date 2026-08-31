@@ -4,7 +4,7 @@
 @media(max-width:900px){.summary{grid-template-columns:1fr}.confidence{min-height:350px}.blocksPanel{grid-template-columns:1fr;margin-top:24px}.details{gap:32px}.filterControls label{display:none}}
 @media(max-width:640px){.header{justify-content:center;height:auto;flex-wrap:wrap;gap:14px}.logo{margin-right:auto}.headerSpacer{display:none}.nav{order:2;width:100%;justify-content:space-between;overflow:auto}.nav a{padding:0 14px}.page{padding:12px}.filters{height:auto;gap:12px;align-items:flex-start;flex-direction:column;padding:12px}.filterControls{width:100%}.filterControls button{flex:1;justify-content:space-between;padding:0 10px}.metrics{grid-template-columns:1fr 1fr}.metrics .metric:last-child{grid-column:1/-1}.feeCard{gap:32px;padding:22px}.feeBreakdown{grid-template-columns:1fr;gap:18px}.feeBreakdown .metric+.metric{border-left:0;border-top:1px solid #374151;padding:18px 0 0}.historyPanel{padding:22px}.historyHeader{gap:20px}.legend{align-items:flex-start;flex-direction:column}.graph{height:210px}.historyStats{grid-template-columns:1fr;gap:18px}.progressRow{grid-template-columns:1fr}.chart{height:390px;padding:20px}.chartCanvas{height:280px}.chartHeader button{padding:6px}.blocksPanel{padding:12px}.blockRow{grid-template-columns:34px 1fr auto}.blockRow em{display:none}.details{padding:20px}.detailsHeader{flex-wrap:wrap}.provider{margin-left:auto}.avatar{display:none}.detailCards{grid-template-columns:1fr 1fr}.add{grid-column:1/-1;min-height:70px}.detailsFooter{grid-template-columns:1fr 1fr;gap:24px}.detailsFooter>div{grid-column:1/-1}.analyze{flex:1}}
 
-.fresh{color:#244bea}.stale{color:#7357d8}.unavailable{color:#9ca3af}.warning,.errorMessage,.disclaimer,.inlineError{font-size:11px;line-height:1.45}.warning{color:#fbbf24}.errorMessage,.inlineError{color:#fca5a5}.disclaimer{color:#6b7280}.sectionState{min-height:260px;display:grid;place-content:center;text-align:center;color:#9ca3af;font-size:13px;gap:12px}.sectionState button{margin:auto;border:0;border-radius:999px;background:#8b5cf6;color:#09090b;padding:10px 18px;font-weight:700}.inlineError{margin-top:18px}.recentBlocksPanel{margin-top:24px;padding:32px;background:#17181e;border:1px solid #30323d}.recentBlocksList{display:grid;gap:10px;margin-top:24px}.recentBlocksList article{display:grid;grid-template-columns:minmax(180px,1fr) repeat(3,auto);align-items:center;gap:24px;padding:18px 20px;border:1px solid #30323d;border-radius:16px;background:#24252f}.recentBlocksList article>div{display:grid;gap:5px}.recentBlocksList span,.recentBlocksList time{color:#9ca3af;font-size:12px}.recentBlocksList strong{font-size:14px}
+.fresh{color:#244bea}.stale{color:#fff}.unavailable{color:#9ca3af}.warning,.errorMessage,.disclaimer,.inlineError{font-size:11px;line-height:1.45}.warning{color:#fbbf24}.errorMessage,.inlineError{color:#fca5a5}.disclaimer{color:#6b7280}.sectionState{min-height:260px;display:grid;place-content:center;text-align:center;color:#9ca3af;font-size:13px;gap:12px}.sectionState button{margin:auto;border:0;border-radius:999px;background:#8b5cf6;color:#09090b;padding:10px 18px;font-weight:700}.inlineError{margin-top:18px}.recentBlocksPanel{margin-top:24px;padding:32px;background:#17181e;border:1px solid #30323d}.recentBlocksList{display:grid;gap:10px;margin-top:24px}.recentBlocksList article{display:grid;grid-template-columns:minmax(180px,1fr) repeat(3,auto);align-items:center;gap:24px;padding:18px 20px;border:1px solid #30323d;border-radius:16px;background:#24252f}.recentBlocksList article>div{display:grid;gap:5px}.recentBlocksList span,.recentBlocksList time{color:#9ca3af;font-size:12px}.recentBlocksList strong{font-size:14px}
 
 @media(max-width:640px){.recentBlocksPanel{padding:22px}.recentBlocksList article{grid-template-columns:1fr 1fr;gap:10px}.recentBlocksList article>div{grid-column:1/-1}}
 
@@ -63,6 +63,40 @@
 
 .filters{margin-top:16px}
 
+/* Fully themed filter dropdowns; unlike native selects, their open menu is styleable. */
+.filterDropdown{position:relative;flex:0 0 auto}
+.filterControls .filterTrigger{min-width:154px;height:36px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid transparent;border-radius:10px;background:#24252f;color:#d1d5db;font:inherit;text-align:left;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.filterControls .filterTrigger:hover,.filterControls .filterTrigger[aria-expanded="true"]{background:#30313b;border-color:#46516a;color:#fff}
+.filterControls .filterTrigger:focus-visible{outline:2px solid #4169e1;outline-offset:3px}
+.filterTrigger img{flex:0 0 auto;transition:transform .18s ease}
+.filterTrigger .chevronOpen{transform:rotate(180deg)}
+.filterMenu{position:absolute;z-index:150;top:calc(100% + 8px);left:0;min-width:100%;padding:6px;border:1px solid #3a3d49;border-radius:12px;background:#1a1b23;box-shadow:0 14px 30px #0008;overflow:hidden}
+.filterControls .filterMenuOption{width:100%;height:auto;min-height:38px;padding:9px 10px;display:flex;align-items:center;justify-content:space-between;gap:16px;border:0;border-radius:8px;background:transparent;color:#e5e7eb;font:inherit;text-align:left;white-space:nowrap;transition:background-color .15s ease,color .15s ease}
+.filterControls .filterMenuOption:hover,.filterControls .filterMenuOption:focus-visible{outline:0;background:#30313b;color:#fff}
+.filterControls .filterMenuOptionSelected,.filterControls .filterMenuOptionSelected:hover,.filterControls .filterMenuOptionSelected:focus-visible{background:#1946e5;color:#fff;font-weight:700}
+.filterControls .filterSearchButton{width:28px;height:28px;padding:0;display:grid;place-items:center;flex:0 0 auto;border:0;border-radius:50%;background:transparent;transition:background-color .18s ease,transform .18s ease}
+.filterControls .filterSearch{height:36px;padding:0 8px 0 16px;display:flex;align-items:center;gap:8px;border-radius:8px;background:#24252f;color:#9ca3af}
+.filterControls .filterSearchButton:hover{background:#3a3b47;transform:scale(1.06)}
+.filterControls .filterSearchButton:focus-visible{outline:2px solid #4169e1;outline-offset:2px}
+.filterSearchButton img{display:block}
+
+/* Interactive history point and smoothly animated value capsule. */
+.graph{padding-left:0}
+.graphPlot{position:absolute;inset:0 0 0 42px;cursor:crosshair;outline:0;touch-action:pan-y}
+.graphPlot:focus-visible{border-radius:8px;box-shadow:0 0 0 2px #4169e1}
+.graphPlot svg{display:block;width:100%;height:100%}
+.feeLine{transition:filter .2s ease,opacity .2s ease}
+.graphPlot:hover .feeLine,.graphPlot:focus .feeLine{filter:drop-shadow(0 0 5px #315fd199)}
+.hoverGuide{stroke:#ffffff2e;stroke-width:1;stroke-dasharray:4 5;animation:chartFadeIn .16s ease both}
+.hoverPointHalo{fill:#1946e533;stroke:#315fd1;stroke-width:2;animation:chartPointIn .18s ease both}
+.hoverPoint{fill:#fff;stroke:#315fd1;stroke-width:3;animation:chartPointIn .18s ease both}
+.chartValueTooltip{position:absolute;z-index:3;display:flex;align-items:center;gap:9px;padding:11px 15px;border:1px solid #3a3d49;border-radius:999px;background:#1d1e24;color:#f8fafc;box-shadow:0 10px 25px #0008;white-space:nowrap;pointer-events:none;transform:translate(-50%,calc(-100% - 17px));transition:left .16s ease,top .16s ease,opacity .16s ease,transform .16s ease;animation:chartTooltipIn .18s ease both}
+.chartValueTooltip strong{font-size:14px;font-weight:650}.chartValueTooltip span{font-size:14px;font-weight:650}.positiveVariation{color:#2dd4bf}.negativeVariation{color:#fb7185}
+.chartValueTooltipStart{transform:translate(0,calc(-100% - 17px))}.chartValueTooltipEnd{transform:translate(-100%,calc(-100% - 17px))}
+@keyframes chartFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes chartPointIn{from{opacity:0;transform:scale(.65);transform-origin:center}to{opacity:1;transform:scale(1);transform-origin:center}}
+@keyframes chartTooltipIn{from{opacity:0}to{opacity:1}}
+
 /* Tablet: identity and connection stay above a navigation row of its own. */
 @media(max-width:1024px){
   .header{height:auto;min-height:64px;padding:12px 20px;flex-wrap:wrap;column-gap:20px;row-gap:12px}
@@ -82,5 +116,11 @@
   .nav a{min-width:0;height:54px;padding:5px 4px;gap:3px;flex-direction:column;font-size:11px;text-align:center;line-height:1.15}
   .navIcon{width:19px;height:19px}
   .filters{margin-top:8px}
+  .filterDropdown{flex:1;min-width:0}
+  .filterControls .filterTrigger{width:100%;min-width:0;padding:0 10px}
+  .filterMenu{right:0;min-width:max-content}
+  .chartValueTooltip{padding:9px 11px;gap:6px}.chartValueTooltip strong,.chartValueTooltip span{font-size:12px}
   .summary,.historyPanel,.blocksPanel,.recentBlocksPanel{scroll-margin-top:152px}
 }
+
+@media(prefers-reduced-motion:reduce){.feeLine,.chartValueTooltip{transition:none}.hoverGuide,.hoverPointHalo,.hoverPoint,.chartValueTooltip{animation:none}}
