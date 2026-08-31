@@ -3,11 +3,7 @@ import type {
   FeeTrendDto,
 } from "@alphractal/contracts";
 
-export type ConnectionStatus =
-  | "connecting"
-  | "connected"
-  | "reconnecting"
-  | "disconnected";
+export type LiveConnection = "connecting" | "live" | "degraded" | "offline";
 
 export type DataStatus = "fresh" | "stale" | "unavailable";
 

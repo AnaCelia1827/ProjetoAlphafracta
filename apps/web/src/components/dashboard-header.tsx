@@ -3,13 +3,20 @@
 import Image from "next/image";
 import { useState } from "react";
 import styles from "@/app/page.module.css";
-import type { ConnectionStatus } from "@/types/fees";
+import type { LiveConnection } from "@/types/fees";
 
-export const connectionLabels: Record<ConnectionStatus, string> = {
+export const connectionLabels: Record<LiveConnection, string> = {
   connecting: "Conectando",
-  connected: "Conectado",
-  reconnecting: "Reconectando",
-  disconnected: "Desconectado",
+  live: "Live",
+  degraded: "Degradado",
+  offline: "Offline",
+};
+
+const connectionClasses: Record<LiveConnection, string> = {
+  connecting: styles.connecting,
+  live: styles.connected,
+  degraded: styles.reconnecting,
+  offline: styles.disconnected,
 };
 
 type NavIconName = "dashboard" | "history" | "live";
@@ -44,7 +51,13 @@ function ConnectionPlugIcon() {
   </svg>;
 }
 
-export function DashboardHeader({ status }: { status: ConnectionStatus }) {
+export function DashboardHeader({
+  status,
+  demo = false,
+}: {
+  status: LiveConnection;
+  demo?: boolean;
+}) {
   const [activeItem, setActiveItem] = useState<"dashboard" | "history" | "live">("live");
 
   return <header className={styles.header}>
@@ -63,9 +76,12 @@ export function DashboardHeader({ status }: { status: ConnectionStatus }) {
       <a className={activeItem === "history" ? styles.active : ""} href="#history" onClick={() => setActiveItem("history")}><NavIcon name="history" />Histórico</a>
       <a className={activeItem === "live" ? styles.active : ""} href="#live" onClick={() => setActiveItem("live")}><NavIcon name="live" />Monitor ao vivo</a>
     </nav>
-    <span className={`${styles.connection} ${styles[status]}`} role="status" aria-live="polite">
+    <div className={styles.headerStatus}>
+      {demo && <span className={styles.demoBadge}>Demo</span>}
+      <span className={`${styles.connection} ${connectionClasses[status]}`} role="status" aria-live="polite">
       <ConnectionPlugIcon />
       {connectionLabels[status]}
-    </span>
+      </span>
+    </div>
   </header>;
 }

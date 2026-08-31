@@ -7,39 +7,66 @@ import { DataStatus } from "@/components/data-status";
 import { FeeCard } from "@/components/fee-card";
 import { FeeHistoryChart } from "@/components/fee-history-chart";
 import { RecentBlocks } from "@/components/recent-blocks";
+import { useBlockSearch } from "@/hooks/use-block-search";
 import { useDataAge } from "@/hooks/use-data-age";
 import { useFeeHistory } from "@/hooks/use-fee-history";
-import { useFeeStream } from "@/hooks/use-fee-stream";
-import { useRecentBlocks } from "@/hooks/use-recent-blocks";
-import type { HistoryRangeHours, NetworkFilter } from "@/types/fees";
+import { useLiveMonitor } from "@/hooks/use-live-monitor";
+import { apiConfig } from "@/lib/api/config";
+import type { HistoryRangeHours } from "@/types/fees";
 import styles from "./page.module.css";
 
 export default function Home() {
-  const [network, setNetwork] = useState<NetworkFilter>("all");
   const [rangeHours, setRangeHours] = useState<HistoryRangeHours>(24);
-  const [blockSearch, setBlockSearch] = useState("");
-  const { snapshot, connectionStatus, error: streamError, refresh: refreshStream } = useFeeStream();
-  const { ageMs, dataStatus } = useDataAge(snapshot);
-  const history = useFeeHistory(rangeHours, network);
-  const recentBlocks = useRecentBlocks(20, network, blockSearch);
+  const [blockSearchValue, setBlockSearchValue] = useState("");
+  const live = useLiveMonitor();
+  const blockSearch = useBlockSearch();
+  const { ageMs, dataStatus } = useDataAge(live.fee);
+  const history = useFeeHistory(rangeHours);
 
-  return <>
-    <DashboardHeader status={connectionStatus} />
-    <main className={styles.page} id="dashboard">
-      <DashboardFilters
-        network={network}
-        rangeHours={rangeHours}
-        search={blockSearch}
-        onNetworkChange={setNetwork}
-        onRangeChange={setRangeHours}
-        onSearchChange={setBlockSearch}
-      />
-      <section className={styles.summary} id="live">
-        <FeeCard snapshot={snapshot} ageMs={ageMs} />
-        <DataStatus snapshot={snapshot} connectionStatus={connectionStatus} dataStatus={dataStatus} error={streamError} onRefresh={refreshStream} />
-      </section>
-      <FeeHistoryChart history={history.history} loading={history.loading} error={history.error} onRefresh={history.refresh} />
-      <RecentBlocks enabled={recentBlocks.enabled} blocks={recentBlocks.blocks} loading={recentBlocks.loading} error={recentBlocks.error} onRefresh={recentBlocks.refresh} />
-    </main>
-  </>;
+  const searchBlock = (identifier: string) => {
+    setBlockSearchValue(identifier);
+    void blockSearch.search(identifier);
+  };
+
+  const backToLive = () => {
+    setBlockSearchValue("");
+    blockSearch.backToLive();
+  };
+
+  return (
+    <>
+      <DashboardHeader status={live.connection} demo={apiConfig.useMockData} />
+      <main className={styles.page} id="dashboard">
+        <DashboardFilters
+          key={blockSearchValue}
+          rangeHours={rangeHours}
+          search={blockSearchValue}
+          onRangeChange={setRangeHours}
+          onSearch={searchBlock}
+        />
+        <section className={styles.summary} id="live">
+          <FeeCard snapshot={live.fee} ageMs={ageMs} />
+          <DataStatus
+            snapshot={live.fee}
+            dataStatus={dataStatus}
+            error={live.feeError?.message ?? null}
+          />
+        </section>
+        <FeeHistoryChart
+          history={history.history}
+          loading={history.loading}
+          error={history.error}
+          onRefresh={history.refresh}
+        />
+        <RecentBlocks
+          blocks={live.blocks}
+          searchedBlock={blockSearch.searchedBlock}
+          onBackToLive={backToLive}
+          loading={live.bootstrapLoading || blockSearch.searching}
+          error={blockSearch.error ?? live.blocksError?.message ?? null}
+          onRefresh={() => void live.refresh()}
+        />
+      </main>
+    </>
+  );
 }

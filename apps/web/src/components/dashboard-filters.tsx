@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import styles from "@/app/page.module.css";
 import type { HistoryRangeHours } from "@/types/fees";
 
@@ -19,8 +19,6 @@ export function DashboardFilters({
   onSearch,
 }: Props) {
   const [draft, setDraft] = useState(search);
-
-  useEffect(() => setDraft(search), [search]);
 
   const submitSearch = () => {
     const value = draft.trim();

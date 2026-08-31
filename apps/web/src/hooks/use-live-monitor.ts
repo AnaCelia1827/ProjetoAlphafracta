@@ -15,10 +15,10 @@ import {
   reduceLiveEvent,
   type LiveMonitorState,
 } from "@/lib/live/live-reducer";
+import { mockFeeSnapshot } from "@/mocks/fee-snapshot";
+import { mockRecentBlocks } from "@/mocks/recent-blocks";
 import type { BlockViewModel } from "@/types/blocks";
-import type { FeeViewModel } from "@/types/fees";
-
-type LiveConnection = "connecting" | "live" | "degraded" | "offline";
+import type { FeeViewModel, LiveConnection } from "@/types/fees";
 
 export type UseLiveMonitorResult = {
   fee: FeeViewModel | null;
@@ -47,19 +47,36 @@ function isAbortError(reason: unknown) {
 
 export function useLiveMonitor(): UseLiveMonitorResult {
   const [liveState, setLiveState] = useState<LiveMonitorState>({
-    fee: null,
-    blocks: [],
+    fee: apiConfig.useMockData ? mockFeeSnapshot : null,
+    blocks: apiConfig.useMockData ? mockRecentBlocks : [],
   });
   const [connection, setConnection] = useState<LiveConnection>(() =>
-    typeof navigator !== "undefined" && !navigator.onLine
+    apiConfig.useMockData
+      ? "live"
+      : typeof navigator !== "undefined" && !navigator.onLine
       ? "offline"
       : "connecting",
   );
-  const [bootstrapLoading, setBootstrapLoading] = useState(true);
+  const [bootstrapLoading, setBootstrapLoading] = useState(
+    !apiConfig.useMockData,
+  );
   const [feeError, setFeeError] = useState<ApiClientError | null>(null);
   const [blocksError, setBlocksError] = useState<ApiClientError | null>(null);
 
   const bootstrap = useCallback(async (signal?: AbortSignal) => {
+    if (apiConfig.useMockData) {
+      setLiveState((current) => ({
+        ...current,
+        fee: {
+          ...mockFeeSnapshot,
+          timestamp: new Date().toISOString(),
+          dataAgeMs: 0,
+        },
+      }));
+      setConnection("live");
+      return;
+    }
+
     setBootstrapLoading(true);
 
     const [feeResult, blocksResult] = await Promise.allSettled([
@@ -111,11 +128,18 @@ export function useLiveMonitor(): UseLiveMonitorResult {
   }, []);
 
   useEffect(() => {
+    if (apiConfig.useMockData) {
+      return;
+    }
+
     const controller = new AbortController();
     let openedOnce = false;
     const stream = new EventSource(apiConfig.streamUrl);
 
-    void bootstrap(controller.signal);
+    const bootstrapTimer = window.setTimeout(
+      () => void bootstrap(controller.signal),
+      0,
+    );
 
     const handleOpen = () => {
       setConnection("live");
@@ -172,6 +196,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
     window.addEventListener("online", handleOnline);
 
     return () => {
+      window.clearTimeout(bootstrapTimer);
       controller.abort();
       stream.close();
       window.removeEventListener("offline", handleOffline);

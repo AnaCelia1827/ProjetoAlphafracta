@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
-import type { DataStatus, FeeSnapshot } from "@/types/fees";
+import type { DataStatus, FeeViewModel } from "@/types/fees";
 
 type Clock = { startedAt: number; now: number };
 
 const initialClock: Clock = { startedAt: 0, now: 0 };
 
-function calculateAge(snapshot: FeeSnapshot | null, clock: Clock): number | null {
+function calculateAge(snapshot: FeeViewModel | null, clock: Clock): number | null {
   if (!snapshot) return null;
 
   if (clock.now === 0) return snapshot.dataAgeMs;
@@ -20,7 +20,7 @@ function calculateAge(snapshot: FeeSnapshot | null, clock: Clock): number | null
   return Math.max(snapshot.dataAgeMs, timestampAge);
 }
 
-export function useDataAge(snapshot: FeeSnapshot | null) {
+export function useDataAge(snapshot: FeeViewModel | null) {
   const [clock, setClock] = useState<Clock>(initialClock);
 
   useEffect(() => {

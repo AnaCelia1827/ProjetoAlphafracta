@@ -81,12 +81,12 @@ export function FeeHistoryChart({ history, loading, error, onRefresh }: Props) {
         >
           <svg role="img" aria-label="Histórico de taxas recomendadas em Gwei" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
             <defs>
-              <linearGradient id="feeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#123bbf" stopOpacity=".38" /><stop offset="1" stopColor="#020068" stopOpacity="0" /></linearGradient>
-              <linearGradient id="feeLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#1946e5" /><stop offset=".55" stopColor="#0b2b9c" /><stop offset="1" stopColor="#020068" /></linearGradient>
+              <linearGradient id="feeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--color-primary-hover)" stopOpacity=".38" /><stop offset="1" stopColor="var(--color-primary-deep)" stopOpacity="0" /></linearGradient>
+              <linearGradient id="feeLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="var(--color-primary)" /><stop offset=".55" stopColor="var(--color-primary-hover)" /><stop offset="1" stopColor="var(--color-primary-deep)" /></linearGradient>
             </defs>
             <polygon points={areaPoints} fill="url(#feeArea)" />
             <polyline className={styles.feeLine} points={maxFeePoints} fill="none" stroke="url(#feeLine)" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-            <polyline points={priorityPoints} fill="none" stroke="#315fd1" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+            <polyline points={priorityPoints} fill="none" stroke="var(--color-focus)" strokeWidth="3" vectorEffect="non-scaling-stroke" />
             {activePoint && <>
               <line className={styles.hoverGuide} x1={activePoint.x} x2={activePoint.x} y1="0" y2={height} vectorEffect="non-scaling-stroke" />
               <circle className={styles.hoverPointHalo} cx={activePoint.x} cy={activePoint.y} r="10" vectorEffect="non-scaling-stroke" />

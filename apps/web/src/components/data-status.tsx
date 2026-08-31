@@ -1,7 +1,5 @@
-import Image from "next/image";
 import styles from "@/app/page.module.css";
-import { connectionLabels } from "@/components/dashboard-header";
-import type { ConnectionStatus, DataStatus as SnapshotDataStatus, FeeSnapshot } from "@/types/fees";
+import type { DataStatus as SnapshotDataStatus, FeeViewModel } from "@/types/fees";
 
 const dataStatusLabels: Record<SnapshotDataStatus, string> = {
   fresh: "Dados ao vivo",
@@ -9,38 +7,72 @@ const dataStatusLabels: Record<SnapshotDataStatus, string> = {
   unavailable: "Aguardando dados",
 };
 
-type DataStatusProps = {
-  snapshot: FeeSnapshot | null;
-  connectionStatus: ConnectionStatus;
-  dataStatus: SnapshotDataStatus;
-  error: string | null;
-  onRefresh: () => void;
+const reasonLabels: Record<FeeViewModel["confidence"]["reasons"][number], string> = {
+  "fresh-data": "Dados recentes",
+  "stable-fees": "Taxas estáveis",
+  "strong-sample": "Amostra robusta",
+  "aging-data": "Dados envelhecendo",
+  "volatile-fees": "Taxas voláteis",
+  "weak-sample": "Amostra reduzida",
+  "missing-data": "Dados ausentes",
 };
 
-export function DataStatus({ snapshot, connectionStatus, dataStatus, error, onRefresh }: DataStatusProps) {
-  const updatedAt = snapshot ? new Date(snapshot.timestamp).toLocaleTimeString("pt-BR") : "—";
-  const persistenceDegraded = snapshot?.health && snapshot.health.persistence !== "connected";
+const sourceStatusLabels: Record<string, string> = {
+  fresh: "Atualizado",
+  stale: "Desatualizado",
+  unavailable: "Indisponível",
+  available: "Disponível",
+  degraded: "Degradado",
+};
 
-  return <article className={`${styles.panel} ${styles.confidence}`}>
-    <div className={styles.panelTitle}><span>Status dos dados</span><Image src="/figma/dashboard.svg" alt="" width={16} height={4} /></div>
-    <div className={styles.statusSummary}>
-      <p className={`${styles.dataStatus} ${styles[dataStatus]}`}>{dataStatusLabels[dataStatus]}</p>
-      <span>{connectionLabels[connectionStatus]} · {updatedAt}</span>
-    </div>
-    <div className={styles.samples}>
-      <div className={dataStatus === "stale" ? styles.staleSource : styles.primarySource}>
-        <strong>{snapshot?.sources.mempool ?? "—"}</strong>
-        <span>Mempool</span>
+type DataStatusProps = {
+  snapshot: FeeViewModel | null;
+  dataStatus: SnapshotDataStatus;
+  error: string | null;
+};
+
+export function DataStatus({
+  snapshot,
+  dataStatus,
+  error,
+}: DataStatusProps) {
+  const updatedAt = snapshot
+    ? new Date(snapshot.timestamp).toLocaleTimeString("pt-BR")
+    : "—";
+
+  return (
+    <article className={`${styles.panel} ${styles.confidence}`}>
+      <div className={styles.panelTitle}>
+        <span>Qualidade da recomendação</span>
       </div>
-      <div>
-        <strong>{snapshot?.sources.price ?? "—"}</strong>
-        <span>Cotação ETH/USD</span>
+      <div className={styles.statusSummary}>
+        <p className={`${styles.dataStatus} ${styles[dataStatus]}`}>
+          {dataStatusLabels[dataStatus]}
+        </p>
+        <span>Atualizado às {updatedAt}</span>
       </div>
-    </div>
-    <button className={styles.refresh} type="button" onClick={onRefresh}>Atualizar dados</button>
-    {!snapshot && <p className={styles.noData}>Aguardando o primeiro snapshot da API.</p>}
-    {persistenceDegraded && <p className={styles.warning}>Dados ao vivo ativos; persistência do histórico degradada.</p>}
-    {error && <p className={styles.errorMessage}>{error}</p>}
-    <p className={styles.disclaimer}>Recomendação baseada na amostra de transações pendentes observada pela Alchemy.</p>
-  </article>;
+
+      <div className={styles.confidenceReasons}>
+        {snapshot?.confidence.reasons.map((reason) => (
+          <span key={reason}>{reasonLabels[reason]}</span>
+        )) ?? <span>Aguardando evidências da API</span>}
+      </div>
+
+      <dl className={styles.sourceStatusGrid}>
+        {snapshot &&
+          Object.entries(snapshot.status).map(([source, status]) => (
+            <div key={source}>
+              <dt>{source}</dt>
+              <dd>{sourceStatusLabels[status] ?? status}</dd>
+            </div>
+          ))}
+      </dl>
+
+      {error && <p className={styles.errorMessage}>{error}</p>}
+      <p className={styles.disclaimer}>
+        Recomendação baseada em dados da Ethereum Mainnet observados pela
+        Alchemy.
+      </p>
+    </article>
+  );
 }

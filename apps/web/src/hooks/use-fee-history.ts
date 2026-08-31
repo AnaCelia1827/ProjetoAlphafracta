@@ -13,16 +13,19 @@ function filterMockHistory(hours: number) {
 }
 
 export function useFeeHistory(hours = 6) {
-  const [history, setHistory] = useState<FeeHistoryPoint[]>(
-    apiConfig.useMockData ? mockFeeHistory : [],
-  );
-  const [loading, setLoading] = useState(!apiConfig.useMockData);
-  const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
+  const requestKey = `${hours}:${requestVersion}`;
+  const [result, setResult] = useState<{
+    requestKey: string;
+    history: FeeHistoryPoint[];
+    error: string | null;
+  }>({
+    requestKey: apiConfig.useMockData ? requestKey : "",
+    history: apiConfig.useMockData ? mockFeeHistory : [],
+    error: null,
+  });
   const refresh = useCallback(() => {
     if (apiConfig.useMockData) return;
-    setLoading(true);
-    setError(null);
     setRequestVersion((value) => value + 1);
   }, []);
 
@@ -32,29 +35,34 @@ export function useFeeHistory(hours = 6) {
     const controller = new AbortController();
     const to = new Date();
     const from = new Date(to.getTime() - hours * 60 * 60 * 1_000);
-    setLoading(true);
-    setError(null);
 
     void fetchAllFeeHistory(from, to, controller.signal)
       .then((items) => {
-        setHistory(items);
-        setError(null);
+        setResult({ requestKey, history: items, error: null });
       })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setError(reason instanceof Error ? reason.message : "Falha ao carregar o histórico.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        setResult((current) => ({
+          requestKey,
+          history: current.history,
+          error:
+            reason instanceof Error
+              ? reason.message
+              : "Falha ao carregar o histórico.",
+        }));
       });
 
     return () => controller.abort();
-  }, [hours, requestVersion]);
+  }, [hours, requestKey]);
+
+  const pending = !apiConfig.useMockData && result.requestKey !== requestKey;
 
   return {
-    history: apiConfig.useMockData ? filterMockHistory(hours) : history,
-    loading,
-    error,
+    history: apiConfig.useMockData
+      ? filterMockHistory(hours)
+      : result.history,
+    loading: pending,
+    error: pending ? null : result.error,
     refresh,
   };
 }

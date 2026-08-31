@@ -124,3 +124,47 @@
 }
 
 @media(prefers-reduced-motion:reduce){.feeLine,.chartValueTooltip{transition:none}.hoverGuide,.hoverPointHalo,.hoverPoint,.chartValueTooltip{animation:none}}
+
+/* Alphractal identity: changing these semantic tokens in globals.css rethemes the UI. */
+.header{background:color-mix(in srgb,var(--color-background) 95%,transparent);border-color:color-mix(in srgb,var(--color-text) 7%,transparent)}
+.panel,.blocksPanel{background:var(--color-surface-raised);box-shadow:0 4px 20px var(--color-overlay)}
+.details,.filters,.filterMenu{background:var(--color-surface)}
+.historyPanel,.recentBlocksPanel{background:var(--color-surface);border-color:var(--color-border)}
+.feeBreakdown,.detailMetric,.historyStats,.filterControls .filterTrigger,.filterControls .filterSearch{background:var(--color-surface-raised)}
+.feeBreakdown .metric+.metric,.detailsFooter,.detailMetric,.samples div,.sourceStatusGrid div{border-color:var(--color-border)}
+.metric>span,.panelTitle>span,.metric em,.statusSummary>span,.disclaimer,.sourceStatusGrid dt,.confidenceReasons span{color:var(--color-text-muted)}
+.nav .active,.sectionState button,.analyze,.backToLive{background:linear-gradient(145deg,var(--color-primary) 0%,var(--color-primary-hover) 55%,var(--color-primary-deep) 100%);color:var(--color-text)}
+.nav .active:hover,.sectionState button:hover,.analyze:hover,.backToLive:hover{background:var(--color-primary-hover)}
+.connected{background:var(--color-success)}
+.connecting{background:var(--color-warning)}
+.disconnected{background:var(--color-danger)}
+.reconnecting{background:var(--color-primary);color:var(--color-text)}
+.nav a:focus-visible,.sectionState button:focus-visible,.blockRow:focus-visible,.share:focus-visible,.analyze:focus-visible,.backToLive:focus-visible,.filterControls select:focus-visible,.filterControls input:focus-visible{outline-color:var(--color-focus)}
+.fresh{color:var(--color-primary)}
+.warning{color:var(--color-warning)}
+.errorMessage,.inlineError{color:var(--color-danger)}
+.legend i,.legend i:nth-child(2),.progressRow b:after{background:var(--color-primary)}
+.blockRow .blockThumb{background:var(--color-primary-deep)}
+.positiveVariation{color:var(--color-success)}
+.negativeVariation{color:var(--color-danger)}
+
+.headerStatus{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.demoBadge{padding:7px 11px;border:1px solid var(--color-focus);border-radius:999px;background:color-mix(in srgb,var(--color-primary) 18%,transparent);color:var(--color-text);font-size:11px;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+.networkBadge{height:36px;padding:0 14px;display:flex;align-items:center;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-raised);color:var(--color-text);font-size:12px;font-weight:650}
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.recommendationMeta{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.recommendationMeta p{display:grid;gap:7px;padding:16px 18px;border:1px solid var(--color-border);border-radius:16px;background:var(--color-surface)}
+.recommendationMeta span{color:var(--color-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.recommendationMeta strong{font-size:16px}
+.confidenceReasons{display:flex;flex-wrap:wrap;gap:8px}
+.confidenceReasons span{padding:7px 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);font-size:11px}
+.sourceStatusGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sourceStatusGrid div{padding:11px 12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sourceStatusGrid dt{font-size:11px;text-transform:capitalize}
+.sourceStatusGrid dd{font-size:11px;font-weight:700}
+.backToLive{min-height:42px;border:0;border-radius:999px;font:inherit;font-weight:700;cursor:pointer}
+.shareNotice{grid-column:1/-1;margin-top:8px;color:var(--color-success);font-size:11px;text-align:right}
+.detailCards{grid-template-columns:1fr 1fr}
+.share{border-color:var(--color-border)}
+
+@media(max-width:640px){.headerStatus{gap:6px}.demoBadge{padding:6px 8px;font-size:9px}.networkBadge{flex:1;justify-content:center}.recommendationMeta,.sourceStatusGrid{grid-template-columns:1fr}.detailCards{grid-template-columns:1fr}.filterControls .filterSearch{display:flex}.filterSearch{flex-basis:100%}}
