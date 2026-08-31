@@ -1,3 +1,7 @@
+/**
+ * Testes de contrato: fixam formatos válidos e inválidos de REST/SSE para que
+ * mudanças no backend não quebrem consumidores nem aceitem estados ambíguos.
+ */
 import type { ZodType } from 'zod';
 import { describe, expect, it } from 'vitest';
 
@@ -66,6 +70,7 @@ const blockSummary = {
   etherscanUrl: 'https://etherscan.io/block/23548192',
 } as const;
 
+/** Obtém schema exportado e torna sua remoção uma falha explícita de contrato. */
 function schema(name: string): ZodType {
   expect(contracts).toHaveProperty(name);
   return (contracts as Record<string, ZodType>)[name]!;

@@ -1,3 +1,7 @@
+/**
+ * Testes do domínio de blocos: especificam gorjetas, análise, percentis,
+ * finality e memória de reorg com entradas exatas e sem adaptadores externos.
+ */
 import { describe, expect, it } from 'vitest';
 
 import * as analyzer from '../../src/domain/blocks/block-analyzer.js';
@@ -11,11 +15,13 @@ const timestamp = new Date('2026-08-30T18:42:15.000Z');
 
 type Callable = (...arguments_: unknown[]) => unknown;
 
+/** Obtém export de domínio sob teste sem acoplar as fixtures ao tipo de módulo. */
 function callable(module: object, name: string): Callable {
   expect(module).toHaveProperty(name);
   return (module as Record<string, Callable>)[name]!;
 }
 
+/** Cria bloco mínimo EIP-1559 e permite variar somente o invariante do cenário. */
 function normalizedBlock(overrides: Record<string, unknown> = {}) {
   return {
     number: 23_548_192n,
@@ -29,6 +35,7 @@ function normalizedBlock(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Cria resumo canônico compacto usado como histórico de classificação e janela. */
 function summary(
   number: bigint,
   effectiveGasPriceWei = { numerator: number, denominator: 1n },

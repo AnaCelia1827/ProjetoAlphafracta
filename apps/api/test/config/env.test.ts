@@ -1,3 +1,7 @@
+/**
+ * Testes de configuração: garantem defaults seguros e rejeitam protocolos,
+ * origens e valores de ambiente que gerariam runtime parcialmente configurado.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { loadConfig } from '../../src/config/env.js';

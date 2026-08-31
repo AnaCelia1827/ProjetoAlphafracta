@@ -1,3 +1,7 @@
+/**
+ * Teste de infraestrutura Coinbase: confirma inscrição ETH/USD e descarte de
+ * ticker inválido usando WebSocket efêmero sem comunicar serviço externo.
+ */
 import { describe, expect, it, vi } from 'vitest';
 import { WebSocketServer } from 'ws';
 

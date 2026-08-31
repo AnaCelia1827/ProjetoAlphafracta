@@ -1,3 +1,7 @@
+/**
+ * Testes SSE: simulam conexões controláveis para fixar replay, IDs, heartbeat,
+ * backpressure e isolamento de cliente lento sem abrir listener HTTP real.
+ */
 import { EventEmitter } from 'node:events';
 
 import { LiveEventSchema } from '@alphractal/contracts';
@@ -7,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LiveSseHub } from '../../src/interfaces/sse/live-sse-hub.js';
 import { blockSummary, feeSnapshot, FIXED_NOW } from '../helpers/fixtures.js';
 
+/** Request mínimo que permite disparar close de um assinante SSE em teste. */
 class ControlledRequest extends EventEmitter {
   constructor(readonly lastEventId?: string) {
     super();
@@ -17,6 +22,7 @@ class ControlledRequest extends EventEmitter {
   }
 }
 
+/** Response controlável que registra frames, bloqueia escrita e simula drain. */
 class ControlledResponse extends EventEmitter {
   readonly headers = new Map<string, string>();
   readonly frames: string[] = [];
@@ -43,6 +49,7 @@ class ControlledResponse extends EventEmitter {
   }
 }
 
+/** Conecta cliente fake ao hub e devolve seus buffers para asserções de protocolo. */
 function connect(hub: LiveSseHub, lastEventId?: string) {
   const request = new ControlledRequest(lastEventId);
   const response = new ControlledResponse();
@@ -50,6 +57,7 @@ function connect(hub: LiveSseHub, lastEventId?: string) {
   return { request, response };
 }
 
+/** Extrai o JSON de frame SSE para comparar ID, tipo e payload publicados. */
 function eventFromFrame(frame: string) {
   const id = /^id: (.+)$/m.exec(frame)?.[1];
   const event = /^event: (.+)$/m.exec(frame)?.[1];

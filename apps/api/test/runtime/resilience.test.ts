@@ -1,3 +1,7 @@
+/**
+ * Testes de resiliência do runtime: garantem start/stop idempotente, recuperação
+ * de MongoDB e continuidade last-known quando fontes Ethereum falham depois do boot.
+ */
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,6 +31,7 @@ const config: AppConfig = {
   PROVIDER_REQUEST_TIMEOUT_MS: 10_000,
 };
 
+/** Monta todos os adaptadores do runtime e permite programar falhas transitórias. */
 function adapters(options: { mongoFailsOnce?: boolean; alchemyFailsAfterStart?: boolean } = {}) {
   const feeRepository = new FakeFeeSnapshotRepository();
   const blockRepository = new FakeObservedBlockRepository();

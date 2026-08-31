@@ -1,3 +1,7 @@
+/**
+ * Testes de infraestrutura MongoDB: especificam serialização exata, índices,
+ * cursor opaco, canonicidade de reorg e degradação com banco local controlado.
+ */
 import type { Db } from 'mongodb';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -49,10 +53,12 @@ interface BlockRepository {
   ): Promise<void>;
 }
 
+/** Cria razão para fixtures de persistência sem converter precisão a Number. */
 function rational(numerator: bigint, denominator = 1n) {
   return { numerator, denominator };
 }
 
+/** Cria snapshot current persistível com valores variáveis para paginação e TTL. */
 function feeSnapshot(
   instant = timestamp,
   recommendedMaxFeeWei = 32_400_000_000n,
@@ -89,6 +95,7 @@ function feeSnapshot(
   };
 }
 
+/** Cria bloco canônico persistível com identidade e finality ajustáveis por cenário. */
 function blockSummary(
   number: bigint,
   hash: `0x${string}` = hashA,

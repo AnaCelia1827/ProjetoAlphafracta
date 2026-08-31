@@ -14,6 +14,14 @@ import type {
 import { createFeeRouter } from './interfaces/http/fee-routes.js';
 import { requestIdMiddleware } from './interfaces/http/request-id-middleware.js';
 
+/**
+ * Camada: interface HTTP.
+ *
+ * Compõe o Express com segurança, CORS explícito, limites de corpo, correlação
+ * e rotas versionadas. A composição recebe casos de uso prontos para preservar
+ * separação entre transporte e regras de monitoramento.
+ */
+/** Dependências da borda HTTP já adaptadas pelos casos de uso e hub SSE. */
 export interface ApiDependencies {
   corsOrigins: ReadonlySet<string>;
   getCurrentFeeSnapshot: CurrentFeeSnapshotQuery;
@@ -23,6 +31,10 @@ export interface ApiDependencies {
   liveSseHub: { handle(request: Request, response: Response): void };
 }
 
+/**
+ * Cria a aplicação Express com respostas sem cache e tratamento uniforme de
+ * falha. Sem dependências, deixa apenas health disponível para testes de base.
+ */
 export function createApp(dependencies?: ApiDependencies): Express {
   const logger = pino({ enabled: process.env.NODE_ENV !== 'test' });
   const app = express();

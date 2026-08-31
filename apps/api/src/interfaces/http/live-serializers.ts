@@ -12,8 +12,20 @@ import type { BlockSummary, FinalityChange } from '../../domain/blocks/models.js
 import type { EstimatedTransferCost, FeeSnapshot, FeeTrend } from '../../domain/fees/models.js';
 import { rational, type Rational } from '../../domain/shared/units.js';
 
+/**
+ * Camada: interface HTTP/SSE.
+ *
+ * É a única borda que arredonda valores exatos BigInt/Rational para números
+ * públicos. Centralizar aqui mantém domínio e persistência precisos e garante
+ * que REST e SSE emitam os mesmos DTOs e IDs determinísticos.
+ */
+/** Fator exato usado na conversão da unidade interna wei para gwei pública. */
 const WEI_PER_GWEI = 1_000_000_000n;
 
+/**
+ * Arredonda razão pela regra metade-para-fora-de-zero na escala solicitada.
+ * Rejeita precisão inválida para evitar serialização silenciosamente imprecisa.
+ */
 export function roundRational(value: Rational, decimalPlaces: number): number {
   if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0) {
     throw new RangeError('Decimal places must be a non-negative integer');
@@ -30,11 +42,13 @@ export function roundRational(value: Rational, decimalPlaces: number): number {
   return Number(rounded) / 10 ** decimalPlaces;
 }
 
+/** Converte wei exato para gwei arredondado somente no limite do contrato público. */
 function weiToGwei(value: bigint | Rational): number {
   const amount = typeof value === 'bigint' ? rational(value) : value;
   return roundRational(rational(amount.numerator, amount.denominator * WEI_PER_GWEI), 9);
 }
 
+/** Serializa custo preservando o estado explícito quando USD não está disponível. */
 function serializeTransferCost(value: EstimatedTransferCost): EstimatedTransferCostDto {
   const base = {
     transactionType: value.transactionType,
@@ -51,6 +65,7 @@ function serializeTransferCost(value: EstimatedTransferCost): EstimatedTransferC
   };
 }
 
+/** Serializa tendência sem forçar valores numéricos em histórico indisponível. */
 function serializeTrend(value: FeeTrend): FeeTrendDto {
   if (value.status !== 'available') return { ...value };
   return {
@@ -62,6 +77,7 @@ function serializeTrend(value: FeeTrend): FeeTrendDto {
   };
 }
 
+/** Converte snapshot interno para DTO validável usado por REST e evento de taxa. */
 export function serializeFeeSnapshot(snapshot: FeeSnapshot): FeeSnapshotDto {
   return {
     timestamp: snapshot.timestamp.toISOString(),
@@ -92,6 +108,7 @@ export function serializeFeeSnapshot(snapshot: FeeSnapshot): FeeSnapshotDto {
   };
 }
 
+/** Converte resumo interno de bloco e cria URL de explorador somente na borda pública. */
 export function serializeBlockSummary(block: BlockSummary): BlockSummaryDto {
   const number = block.number.toString();
   return {
@@ -112,6 +129,7 @@ export function serializeBlockSummary(block: BlockSummary): BlockSummaryDto {
   };
 }
 
+/** Converte promoção interna de finality no payload SSE leve e estável. */
 export function serializeBlockStatusChange(change: FinalityChange): BlockStatusChangedDto {
   return {
     number: change.number.toString(),
@@ -120,6 +138,10 @@ export function serializeBlockStatusChange(change: FinalityChange): BlockStatusC
   };
 }
 
+/**
+ * Serializa fato de aplicação e deriva ID determinístico para reconexão e
+ * deduplicação do consumidor SSE.
+ */
 export function serializeLiveEvent(event: LiveEvent): LiveEventDto {
   if (event.type === 'fee-snapshot') {
     const data = serializeFeeSnapshot(event.snapshot);

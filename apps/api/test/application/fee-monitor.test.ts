@@ -1,3 +1,7 @@
+/**
+ * Testes de aplicação de taxas: verificam cálculo atual, fallback last-known,
+ * coalescência e consultas sem depender de fontes Ethereum ou MongoDB reais.
+ */
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -19,6 +23,7 @@ import { rational } from '../../src/domain/shared/units.js';
 import { FakeFeeSnapshotRepository } from '../helpers/fakes.js';
 import { feeSnapshot, FIXED_NOW, pendingBid } from '../helpers/fixtures.js';
 
+/** Monta fontes e repositório controlados com instantâneo fixo para cada cenário. */
 function setup() {
   const repository = new FakeFeeSnapshotRepository();
   const cache = new FeeSnapshotCache();

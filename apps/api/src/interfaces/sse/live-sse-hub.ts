@@ -8,15 +8,28 @@ import type { BlockSummary } from '../../domain/blocks/models.js';
 import type { FeeSnapshot } from '../../domain/fees/models.js';
 import { serializeLiveEvent } from '../http/live-serializers.js';
 
+/**
+ * Camada: interface SSE.
+ *
+ * Mantém assinantes, último snapshot e último bloco para que conexões tardias
+ * recebam contexto imediato. Backpressure tem fila limitada por eventos e bytes;
+ * cliente lento é desconectado para não comprometer o processo inteiro.
+ */
+/** Limite de eventos pendentes por cliente antes de encerrar consumidor lento. */
 const MAX_QUEUED_EVENTS = 100;
+/** Limite de bytes pendentes por cliente antes de encerrar consumidor lento. */
 const MAX_QUEUED_BYTES = 256 * 1024;
+/** Cadência padrão de heartbeat que mantém proxies e conexões ociosas ativas. */
 const HEARTBEAT_MS = 15_000;
+/** Tempo sugerido para o cliente tentar reconectar após interrupção do stream. */
 const RETRY_MS = 3_000;
 
+/** Opções de operação do hub que permitem encurtar heartbeat em testes. */
 export interface LiveSseHubOptions {
   heartbeatMs?: number;
 }
 
+/** Estado por conexão necessário para controlar fila, backpressure e limpeza de listeners. */
 interface SseClient {
   request: Request;
   response: Response;
@@ -27,17 +40,20 @@ interface SseClient {
   onClose: () => void;
 }
 
+/** Formata fato de aplicação no wire format SSE após validá-lo na serialização comum. */
 function eventFrame(event: LiveEvent): string {
   const serialized = serializeLiveEvent(event);
   return `id: ${serialized.id}\nevent: ${serialized.event}\ndata: ${JSON.stringify(serialized.data)}\n\n`;
 }
 
+/** Hub SSE que implementa a porta de publicação ao vivo da aplicação. */
 export class LiveSseHub implements LiveEventPublisher {
   private readonly clients = new Set<SseClient>();
   private readonly heartbeat: ReturnType<typeof setInterval>;
   private latestFeeSnapshot: FeeSnapshot | null = null;
   private latestBlock: BlockSummary | null = null;
 
+  /** Inicia heartbeat compartilhado e evita que ele mantenha o processo vivo sozinho. */
   constructor(options: LiveSseHubOptions = {}) {
     this.heartbeat = setInterval(() => {
       this.broadcast(': heartbeat\n\n');
@@ -45,6 +61,10 @@ export class LiveSseHub implements LiveEventPublisher {
     this.heartbeat.unref();
   }
 
+  /**
+   * Registra cliente, envia política de retry e reidrata os últimos fatos úteis
+   * antes de receber eventos futuros. Listeners removem conexão em qualquer close.
+   */
   handle(request: Request, response: Response): void {
     response.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     response.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -75,6 +95,7 @@ export class LiveSseHub implements LiveEventPublisher {
     }
   }
 
+  /** Atualiza estado para novas conexões e transmite o mesmo frame a todos os clientes. */
   publish(event: LiveEvent): void {
     if (event.type === 'fee-snapshot') this.latestFeeSnapshot = event.snapshot;
     if (event.type === 'block-added') this.latestBlock = event.block;
@@ -88,10 +109,12 @@ export class LiveSseHub implements LiveEventPublisher {
     this.broadcast(eventFrame(event));
   }
 
+  /** Expõe contagem para testes e diagnóstico sem revelar conexões individuais. */
   clientCount(): number {
     return this.clients.size;
   }
 
+  /** Fecha hub idempotentemente, encerra clientes e libera snapshots retidos em memória. */
   close(): void {
     clearInterval(this.heartbeat);
     for (const client of [...this.clients]) this.disconnect(client, true);
@@ -99,10 +122,15 @@ export class LiveSseHub implements LiveEventPublisher {
     this.latestBlock = null;
   }
 
+  /** Escreve um frame em cópia do conjunto para tolerar remoção durante iteração. */
   private broadcast(frame: string): void {
     for (const client of [...this.clients]) this.write(client, frame);
   }
 
+  /**
+   * Escreve imediatamente ou enfileira após backpressure. Ultrapassar limites
+   * desconecta só o cliente lento, preservando os demais assinantes.
+   */
   private write(client: SseClient, frame: string): void {
     if (!this.clients.has(client)) return;
     if (!client.blocked) {
@@ -117,6 +145,7 @@ export class LiveSseHub implements LiveEventPublisher {
     }
   }
 
+  /** Drena a fila enquanto o transporte aceitar escrita, restaurando bloqueio se necessário. */
   private drain(client: SseClient): void {
     if (!this.clients.has(client)) return;
     client.blocked = false;
@@ -130,6 +159,7 @@ export class LiveSseHub implements LiveEventPublisher {
     }
   }
 
+  /** Remove listeners, descarta fila e opcionalmente encerra a resposta HTTP do cliente. */
   private disconnect(client: SseClient, end: boolean): void {
     if (!this.clients.delete(client)) return;
     client.queue.length = 0;

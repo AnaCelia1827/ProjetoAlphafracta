@@ -1,9 +1,15 @@
+/**
+ * Fixtures determinísticas: fornecem instantes, lances, snapshots e blocos
+ * coerentes para que testes expressem apenas a regra que desejam variar.
+ */
 import type { BlockSummary, NormalizedBlock } from '../../src/domain/blocks/models.js';
 import type { FeeSnapshot, PendingBid } from '../../src/domain/fees/models.js';
 import { rational } from '../../src/domain/shared/units.js';
 
+/** Instante compartilhado que elimina flutuação de relógio nos cenários de teste. */
 export const FIXED_NOW = new Date('2026-08-30T18:42:15.000Z');
 
+/** Cria lance pendente EIP-1559 válido com hash e gorjeta controláveis. */
 export function pendingBid(
   index: number,
   observedAt = FIXED_NOW,
@@ -18,6 +24,7 @@ export function pendingBid(
   };
 }
 
+/** Cria snapshot atual completo e permite variar somente campos relevantes do cenário. */
 export function feeSnapshot(overrides: Partial<FeeSnapshot> = {}): FeeSnapshot {
   return {
     timestamp: FIXED_NOW,
@@ -51,6 +58,7 @@ export function feeSnapshot(overrides: Partial<FeeSnapshot> = {}): FeeSnapshot {
   };
 }
 
+/** Cria bloco EIP-1559 normalizado com tempo derivado da altura para manter ordem estável. */
 export function normalizedBlock(
   number: bigint,
   hash: `0x${string}` = `0x${number.toString(16).padStart(64, '0')}`,
@@ -72,6 +80,7 @@ export function normalizedBlock(
   };
 }
 
+/** Cria resumo canônico exibível a partir do bloco fixture e overrides do teste. */
 export function blockSummary(number: bigint, overrides: Partial<BlockSummary> = {}): BlockSummary {
   const block = normalizedBlock(number);
   return {

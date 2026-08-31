@@ -4,6 +4,13 @@ import { loadConfig } from './config/env.js';
 import { loadRootEnvironment } from './config/root-env.js';
 import { createRuntime } from './runtime.js';
 
+/**
+ * Camada: entrada de processo.
+ *
+ * Carrega ambiente, compõe runtime, inicia listener HTTP e converte sinais do
+ * sistema em desligamento idempotente para não abandonar sockets ou banco aberto.
+ */
+/** Fecha o listener HTTP como Promise para ordenar o shutdown com o runtime. */
 function closeServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => {
@@ -13,6 +20,7 @@ function closeServer(server: Server): Promise<void> {
   });
 }
 
+/** Inicializa servidor e registra tratamento único de SIGINT/SIGTERM. */
 async function main(): Promise<void> {
   loadRootEnvironment();
   const config = loadConfig(process.env);
@@ -23,6 +31,7 @@ async function main(): Promise<void> {
     console.info(`API listening on port ${config.PORT}`);
   });
   let shutdownPromise: Promise<void> | null = null;
+  /** Compartilha a mesma Promise para impedir shutdown concorrente por dois sinais. */
   const shutdown = () => {
     shutdownPromise ??= (async () => {
       await runtime.stop();
@@ -30,6 +39,7 @@ async function main(): Promise<void> {
     })();
     return shutdownPromise;
   };
+  /** Dispara shutdown e comunica falha por exit code, sem vazar causa no console. */
   const requestShutdown = () => {
     void shutdown().catch(() => {
       console.error('API shutdown failed');

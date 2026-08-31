@@ -5,14 +5,29 @@ import { InvalidQueryError, InvalidTimeRangeError } from '../../application/comm
 import type { FeeSnapshot, FeeHistoryPage, FeeHistoryQuery } from '../../domain/fees/models.js';
 import { serializeFeeSnapshot } from './live-serializers.js';
 
+/**
+ * Camada: interface HTTP.
+ *
+ * Conecta endpoints de taxas aos casos de uso e valida consulta no contrato
+ * compartilhado. A rota apenas converte dados de requisição e serializa saída;
+ * decisões de cache, cálculo e persistência pertencem à aplicação.
+ */
+/** Capacidade necessária para servir o snapshot atual. */
 export interface CurrentFeeSnapshotQuery {
+  /** Busca snapshot atual ou lança indisponibilidade já descrita pela aplicação. */
   execute(): Promise<FeeSnapshot>;
 }
 
+/** Capacidade necessária para consultar página normalizada de histórico. */
 export interface FeeHistoryQueryUseCase {
+  /** Busca página temporal após a rota validar e converter os parâmetros. */
   execute(query: FeeHistoryQuery): Promise<FeeHistoryPage>;
 }
 
+/**
+ * Valida query com schema público e converte datas para domínio. Intervalo
+ * invertido recebe erro específico para uma mensagem mais útil ao consumidor.
+ */
 function parseHistoryQuery(query: Record<string, unknown>): FeeHistoryQuery {
   const result = FeeHistoryQuerySchema.safeParse(query);
   if (!result.success) {
@@ -40,6 +55,7 @@ function parseHistoryQuery(query: Record<string, unknown>): FeeHistoryQuery {
   };
 }
 
+/** Cria endpoints current e history com envelopes compatíveis com os contratos Zod. */
 export function createFeeRouter(dependencies: {
   getCurrentFeeSnapshot: CurrentFeeSnapshotQuery;
   getFeeHistory: FeeHistoryQueryUseCase;

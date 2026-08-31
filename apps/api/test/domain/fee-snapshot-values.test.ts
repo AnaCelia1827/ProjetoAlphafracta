@@ -1,3 +1,7 @@
+/**
+ * Testes de valores derivados: especificam custo de transferência, tendência e
+ * confiança em unidades exatas, incluindo limites temporais e indisponibilidade.
+ */
 import { describe, expect, it, vi } from 'vitest';
 
 import * as confidence from '../../src/domain/fees/fee-confidence.js';
@@ -8,15 +12,18 @@ const now = new Date('2026-08-30T18:42:15.000Z');
 
 type Callable = (...arguments_: unknown[]) => unknown;
 
+/** Lê função exportada sem prender os cenários ao shape completo do módulo. */
 function callable(module: object, name: string): Callable {
   expect(module).toHaveProperty(name);
   return (module as Record<string, Callable>)[name]!;
 }
 
+/** Cria razão literal para expectativas que devem manter precisão BigInt. */
 function rational(numerator: bigint, denominator = 1n) {
   return { numerator, denominator };
 }
 
+/** Cria o subconjunto de snapshot necessário para simular janelas de tendência. */
 function snapshot(recommendedMaxFeeWei: bigint, timestamp = now) {
   return { recommendedMaxFeeWei, timestamp };
 }

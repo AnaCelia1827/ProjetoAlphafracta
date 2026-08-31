@@ -5,6 +5,10 @@ import {
   FeeHistoryResponseSchema,
   RecentBlocksResponseSchema,
 } from '@alphractal/contracts';
+/**
+ * Testes REST: validam rotas, serialização, headers de segurança e envelopes de
+ * erro contra dependências controladas, sem iniciar o runtime completo.
+ */
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -19,6 +23,7 @@ import {
 import { createApp, type ApiDependencies } from '../../src/app.js';
 import { blockSummary, feeSnapshot, FIXED_NOW } from '../helpers/fixtures.js';
 
+/** Monta dependências determinísticas que representam casos de uso na borda HTTP. */
 function dependencies(): ApiDependencies {
   return {
     corsOrigins: new Set(['https://app.alphractal.test']),
@@ -32,6 +37,7 @@ function dependencies(): ApiDependencies {
   };
 }
 
+/** Verifica cabeçalhos de segurança, cache e correlação comuns a toda resposta REST. */
 function expectRestHeaders(response: request.Response): void {
   expect(response.headers['x-request-id']).toEqual(expect.any(String));
   expect(response.headers['cache-control']).toBe('no-store');

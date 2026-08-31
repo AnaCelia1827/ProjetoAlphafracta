@@ -1,3 +1,7 @@
+/**
+ * Testes de infraestrutura Alchemy: exercitam RPC e WebSocket locais para
+ * garantir normalização, assinatura e reconexão sem usar credenciais reais.
+ */
 import { createServer, type Server } from 'node:http';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -22,6 +26,7 @@ const requests: RpcRequest[] = [];
 let httpServer: Server;
 let httpUrl: string;
 
+/** Produz resposta RPC determinística para cada método suportado pelo adaptador. */
 function rpcResult(request: RpcRequest): unknown {
   if (request.method === 'eth_feeHistory') {
     return {
@@ -56,6 +61,7 @@ function rpcResult(request: RpcRequest): unknown {
   throw new Error(`Unexpected RPC method ${request.method}`);
 }
 
+/** Cria payload RPC de bloco com ou sem transações completas conforme a consulta. */
 function rpcBlock(number: string, blockHash: string, includeTransactions: boolean) {
   return {
     number,

@@ -1,3 +1,7 @@
+/**
+ * Testes de utilitários numéricos: impedem perda de precisão nos cálculos de
+ * mediana, percentil e frações que sustentam todas as recomendações de taxa.
+ */
 import { describe, expect, it } from 'vitest';
 
 import * as statistics from '../../src/domain/shared/statistics.js';
@@ -5,6 +9,7 @@ import * as units from '../../src/domain/shared/units.js';
 
 type Callable = (...arguments_: unknown[]) => unknown;
 
+/** Obtém helper exportado e falha cedo se o contrato do módulo for removido. */
 function functionFrom(module: object, name: string): Callable {
   expect(module).toHaveProperty(name);
   return (module as Record<string, Callable>)[name]!;

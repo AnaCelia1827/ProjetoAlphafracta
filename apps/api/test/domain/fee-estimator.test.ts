@@ -1,3 +1,7 @@
+/**
+ * Testes do estimador de taxas: fixam P60, mediana, margem EIP-1559 e descarte
+ * de lances inválidos para que alterações futuras não mudem a política implícita.
+ */
 import { describe, expect, it } from 'vitest';
 
 import * as estimator from '../../src/domain/fees/fee-estimator.js';
@@ -14,12 +18,14 @@ interface Estimate {
   pendingEffectiveTipsWei: bigint[];
 }
 
+/** Invoca o estimador exportado mantendo o fixture independente da assinatura interna. */
 function estimate(input: object): Estimate | null {
   expect(estimator).toHaveProperty('estimateFees');
   const callable = (estimator as Record<string, Callable>).estimateFees!;
   return callable(input) as Estimate | null;
 }
 
+/** Cria um lance pendente EIP-1559 ou legacy com hash determinístico por cenário. */
 function bid(
   suffix: number,
   values: {

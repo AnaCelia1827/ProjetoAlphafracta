@@ -1,6 +1,13 @@
 import { ConnectionString } from 'mongodb-connection-string-url';
 import { z } from 'zod';
 
+/**
+ * Camada: configuração.
+ *
+ * Valida todo ambiente antes de criar adaptadores. URLs externas são aceitas
+ * apenas nos protocolos esperados; Mongo é opcional para suportar modo degradado.
+ */
+/** Valida URI MongoDB com o parser do próprio ecossistema, sem abrir conexão. */
 const mongodbUri = z.string().refine(
   (value) => {
     try {
@@ -13,6 +20,7 @@ const mongodbUri = z.string().refine(
   { message: 'MONGODB_URI must use the mongodb:// or mongodb+srv:// scheme' },
 );
 
+/** Cria schema de URL que impede trocar transporte HTTP seguro e WebSocket seguro. */
 function urlWithProtocol(protocol: 'https:' | 'wss:') {
   return z
     .string()
@@ -22,6 +30,7 @@ function urlWithProtocol(protocol: 'https:' | 'wss:') {
     });
 }
 
+/** Converte lista CORS em origens explícitas, sem curingas, credenciais ou caminhos. */
 const corsOrigins = z
   .string()
   .min(1)
@@ -48,8 +57,10 @@ const corsOrigins = z
     { message: 'CORS_ORIGINS entries must be explicit HTTP(S) origins without wildcard' },
   );
 
+/** Restringe intervalos e timeouts a milissegundos inteiros positivos. */
 const positiveMilliseconds = z.coerce.number().int().positive();
 
+/** Schema completo do ambiente consumido pelo runtime de produção. */
 const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   ALCHEMY_HTTP_URL: urlWithProtocol('https:'),
@@ -62,8 +73,10 @@ const schema = z.object({
   PROVIDER_REQUEST_TIMEOUT_MS: positiveMilliseconds.default(10_000),
 });
 
+/** Configuração normalizada, com defaults já aplicados, usada após validação. */
 export type AppConfig = z.infer<typeof schema>;
 
+/** Faz parse fail-fast do ambiente, impedindo servidor parcialmente configurado. */
 export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
   return schema.parse(env);
 }

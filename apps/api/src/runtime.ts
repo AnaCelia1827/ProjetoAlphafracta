@@ -36,29 +36,51 @@ import { MongoFeeSnapshotRepository } from './infrastructure/mongodb/mongo-fee-s
 import { MongoObservedBlockRepository } from './infrastructure/mongodb/mongo-observed-block-repository.js';
 import { LiveSseHub } from './interfaces/sse/live-sse-hub.js';
 
+/**
+ * Camada: composição e ciclo de vida.
+ *
+ * Monta adaptadores e casos de uso, inicia fontes externas de maneira tolerante
+ * a falhas e coordena shutdown idempotente. A indisponibilidade temporária de
+ * MongoDB não impede monitoramento em memória e é tentada novamente com backoff.
+ */
+/** Espera inicial antes de tentar restabelecer persistência MongoDB. */
 const MONGO_RECONNECT_BASE_MS = 5_000;
+/** Teto de espera para impedir backoff de MongoDB sem limite. */
 const MONGO_RECONNECT_MAX_MS = 60_000;
 
+/** Fonte externa cujo ciclo de vida é controlado pelo runtime. */
 interface LifecycleSource {
+  /** Abre a fonte depois que casos de uso e listeners estão prontos. */
   start(): void;
+  /** Fecha recursos e timers da fonte durante shutdown. */
   stop(): void;
 }
 
+/** Fonte de blocos que também entrega novas cabeças por callback. */
 interface HeadLifecycleSource {
+  /** Inicia fonte e encaminha cada nova cabeça normalizada ao runtime. */
   start(listener: (head: FinalityHead) => void): void;
+  /** Interrompe stream de cabeças e libera seu transporte. */
   stop(): void;
 }
 
+/** Componente que precisa preparar estruturas persistentes após a conexão. */
 interface Initializable {
+  /** Inicializa coleções, índices ou estado externo necessário ao componente. */
   initialize(): Promise<void>;
 }
 
+/** Subconjunto do gerenciador Mongo necessário à política de reconexão. */
 interface MongoLifecycle {
+  /** Tenta abrir e validar a conexão persistente. */
   connect(): Promise<void>;
+  /** Fecha a conexão uma única vez no desligamento. */
   close(): Promise<void>;
+  /** Informa se repositórios podem executar I/O persistente no momento. */
   isAvailable(): boolean;
 }
 
+/** Adaptadores injetáveis que tornam a composição testável sem rede real. */
 export interface RuntimeAdapters {
   clock: Clock;
   mongo: MongoLifecycle | null;
@@ -70,59 +92,83 @@ export interface RuntimeAdapters {
   blockSource: EthereumBlockSource & HeadLifecycleSource;
 }
 
+/** Logger estrutural reduzido para que testes verifiquem falhas recuperáveis. */
 export interface RuntimeLogger {
+  /** Registra transição normal de componente e disponibilidade. */
   info(bindings: object, message: string): void;
+  /** Registra degradação da qual o runtime continuará se recuperando. */
   warn(bindings: object, message: string): void;
+  /** Reserva saída para erro que impede operação ou desligamento. */
   error(bindings: object, message: string): void;
 }
 
+/** Resultado composto: aplicação HTTP e controle idempotente de ciclo de vida. */
 export interface Runtime {
   app: Express;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
 
+/** Fallback de persistência que permite a API operar sem URI MongoDB configurada. */
 class UnavailableFeeRepository implements FeeSnapshotRepository, Initializable {
+  /** Não prepara estado, pois o fallback representa banco ausente por definição. */
   async initialize(): Promise<void> {}
+  /** Rejeita escrita para que o caso de uso marque o snapshot como degradado. */
   async insert(): Promise<void> {
     throw new PersistenceUnavailableError();
   }
+  /** Sinaliza que não há histórico persistido para bootstrap. */
   async findLatest(): Promise<null> {
     throw new FeeHistoryUnavailableError();
   }
+  /** Sinaliza indisponibilidade de leitura para cálculo de tendência. */
   async findWindow(): Promise<never[]> {
     throw new FeeHistoryUnavailableError();
   }
+  /** Sinaliza indisponibilidade de paginação para a rota de histórico. */
   async findPage(): Promise<never> {
     throw new FeeHistoryUnavailableError();
   }
+  /** Declara persistência indisponível para seleção de fallback pela aplicação. */
   isAvailable(): boolean {
     return false;
   }
 }
 
+/** Fallback de blocos que mantém a janela em memória quando MongoDB não existe. */
 class UnavailableBlockRepository implements ObservedBlockRepository, Initializable {
+  /** Não prepara estado porque nenhuma coleção está disponível neste fallback. */
   async initialize(): Promise<void> {}
+  /** Rejeita escrita canônica para o caso de uso continuar de forma degradada. */
   async saveCanonical(): Promise<void> {
     throw new PersistenceUnavailableError();
   }
+  /** Rejeita marcação de reorg, que permanece apenas na janela em memória. */
   async markNoncanonical(): Promise<void> {
     throw new PersistenceUnavailableError();
   }
+  /** Rejeita recuperação inicial persistida de blocos. */
   async findRecent(): Promise<never[]> {
     throw new PersistenceUnavailableError();
   }
+  /** Rejeita contexto persistido, resultando em classificação unavailable. */
   async findCanonicalBefore(): Promise<never[]> {
     throw new PersistenceUnavailableError();
   }
+  /** Rejeita persistência de promoções sem impedir publicação SSE. */
   async updateFinality(): Promise<void> {
     throw new PersistenceUnavailableError();
   }
+  /** Declara que a aplicação deve selecionar caminhos sem persistência. */
   isAvailable(): boolean {
     return false;
   }
 }
 
+/**
+ * Remove credenciais, caminho e parâmetros de uma URL antes de registrá-la em
+ * logs. Valor sem esquema reconhecível vira marcador, nunca é retornado intacto.
+ */
 export function redactConnectionUrl(value: string): string {
   const schemeEnd = value.indexOf('://');
   if (schemeEnd < 1) return '[redacted-url]';
@@ -137,6 +183,7 @@ export function redactConnectionUrl(value: string): string {
   return host.length === 0 ? '[redacted-url]' : `${scheme}${host}/[redacted]`;
 }
 
+/** Extrai nome de banco da URI sem incluir credenciais, query string ou fragmento. */
 function databaseName(uri: string): string {
   const schemeEnd = uri.indexOf('://');
   const remainder = uri.slice(schemeEnd + 3);
@@ -146,6 +193,7 @@ function databaseName(uri: string): string {
   return path === undefined || path === '' ? 'alphractal' : decodeURIComponent(path);
 }
 
+/** Constrói adaptadores reais apenas na composição, mantendo domínio livre de detalhes. */
 function concreteAdapters(config: AppConfig): RuntimeAdapters {
   const clock = new SystemClock();
   let mongo: MongoClientManager | null = null;
@@ -185,6 +233,7 @@ function concreteAdapters(config: AppConfig): RuntimeAdapters {
   };
 }
 
+/** Identifica falhas esperadas que devem gerar aviso e permitir a próxima tentativa. */
 function isRecoverable(error: unknown): boolean {
   return (
     error instanceof ApplicationError ||
@@ -193,6 +242,10 @@ function isRecoverable(error: unknown): boolean {
   );
 }
 
+/**
+ * Compõe a API completa e devolve controles de start/stop. Dependências podem
+ * ser injetadas por testes; em produção elas são instanciadas com AppConfig.
+ */
 export function createRuntime(
   config: AppConfig,
   options: { adapters?: RuntimeAdapters; logger?: RuntimeLogger } = {},
@@ -253,6 +306,7 @@ export function createRuntime(
   let mongoConnecting = false;
   let headWork: Promise<void> = Promise.resolve();
 
+  /** Executa monitor e reduz falha recuperável a log, preservando o scheduler. */
   const runFeeMonitor = async () => {
     try {
       await feeMonitor.trigger();
@@ -264,6 +318,10 @@ export function createRuntime(
     }
   };
 
+  /**
+   * Tenta conectar, preparar repositórios e restaurar estado. Ao recuperar uma
+   * conexão, recompõe janela e snapshot antes de voltar ao fluxo periódico.
+   */
   const connectMongo = async (recovering: boolean): Promise<boolean> => {
     if (adapters.mongo === null || mongoConnecting) return false;
     mongoConnecting = true;
@@ -286,6 +344,7 @@ export function createRuntime(
     }
   };
 
+  /** Agenda tentativas seriais de MongoDB com backoff, canceladas no shutdown. */
   const scheduleMongoReconnect = () => {
     if (adapters.mongo === null || stopped) return;
     mongoReconnectTimer = setTimeout(async () => {
@@ -300,6 +359,10 @@ export function createRuntime(
 
   return {
     app,
+    /**
+     * Inicializa fontes, reidrata estado quando possível e inicia monitores.
+     * Chamadas duplicadas ou após stop são ignoradas para evitar recursos duplos.
+     */
     async start() {
       if (started || stopped) return;
       started = true;
@@ -338,6 +401,7 @@ export function createRuntime(
       feeInterval = setInterval(() => void runFeeMonitor(), config.FEE_INTERVAL_MS);
       feeInterval.unref();
     },
+    /** Fecha timers, streams, SSE e MongoDB exatamente uma vez, aguardando cabeça em curso. */
     async stop() {
       if (stopped) return;
       stopped = true;

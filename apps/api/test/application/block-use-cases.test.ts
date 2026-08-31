@@ -1,3 +1,7 @@
+/**
+ * Testes de aplicação de blocos: protegem observação, backfill, busca pontual,
+ * reorg e finality usando fakes para isolar as regras de HTTP e MongoDB reais.
+ */
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -29,6 +33,7 @@ import { blockSummary, normalizedBlock } from '../helpers/fixtures.js';
 const hashA = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const hashB = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
+/** Monta cenário controlado de blocos, janela, repositório e publicação ao vivo. */
 function setup() {
   const repository = new FakeObservedBlockRepository();
   const window = new RecentBlockWindow(20);
