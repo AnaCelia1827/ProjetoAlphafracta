@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { apiConfig } from "@/lib/api/config";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { parseFeeHistoryResponse } from "@/lib/api/parsers";
@@ -15,7 +16,9 @@ export async function fetchFeeHistory(
   url.searchParams.set("to", to.toISOString());
   if (network !== "all") url.searchParams.set("network", network);
 
-  const parsed = parseFeeHistoryResponse(await fetchJson(url.toString(), signal));
+  const parsed = parseFeeHistoryResponse(
+    await fetchJson(url.toString(), z.unknown(), signal),
+  );
   if (!parsed) throw new Error("A API retornou um histórico inválido.");
   return parsed.items;
 }

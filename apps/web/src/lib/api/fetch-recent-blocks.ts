@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { apiConfig } from "@/lib/api/config";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { parseRecentBlocksResponse } from "@/lib/api/parsers";
@@ -15,7 +16,9 @@ export async function fetchRecentBlocks(
   if (network !== "all") url.searchParams.set("network", network);
   if (search.trim()) url.searchParams.set("search", search.trim());
 
-  const parsed = parseRecentBlocksResponse(await fetchJson(url.toString(), signal));
+  const parsed = parseRecentBlocksResponse(
+    await fetchJson(url.toString(), z.unknown(), signal),
+  );
   if (!parsed) throw new Error("A API retornou blocos em formato inválido.");
   return parsed.items;
 }

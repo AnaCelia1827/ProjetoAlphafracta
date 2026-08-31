@@ -8,7 +8,7 @@ import type { RecentBlock } from "@/types/blocks";
 import type { NetworkFilter } from "@/types/fees";
 
 export function useRecentBlocks(limit = 5, network: NetworkFilter = "all", search = "") {
-  const enabled = apiConfig.enableRecentBlocks;
+  const enabled = true;
   const [blocks, setBlocks] = useState<RecentBlock[]>(
     enabled && apiConfig.useMockData ? mockRecentBlocks.slice(0, limit) : [],
   );
