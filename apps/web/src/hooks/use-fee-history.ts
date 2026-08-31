@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
-import { fetchFeeHistory } from "@/lib/api/fetch-fee-history";
+import { fetchAllFeeHistory } from "@/lib/api/fetch-fee-history";
 import { mockFeeHistory } from "@/mocks/fee-snapshot";
-import type { FeeHistoryPoint, NetworkFilter } from "@/types/fees";
+import type { FeeHistoryPoint } from "@/types/fees";
 
 function filterMockHistory(hours: number) {
   const lastTimestamp = Date.parse(mockFeeHistory.at(-1)?.timestamp ?? "");
@@ -12,7 +12,7 @@ function filterMockHistory(hours: number) {
   return mockFeeHistory.filter((item) => Date.parse(item.timestamp) >= cutoff);
 }
 
-export function useFeeHistory(hours = 6, network: NetworkFilter = "all") {
+export function useFeeHistory(hours = 6) {
   const [history, setHistory] = useState<FeeHistoryPoint[]>(
     apiConfig.useMockData ? mockFeeHistory : [],
   );
@@ -32,7 +32,10 @@ export function useFeeHistory(hours = 6, network: NetworkFilter = "all") {
     const controller = new AbortController();
     const to = new Date();
     const from = new Date(to.getTime() - hours * 60 * 60 * 1_000);
-    void fetchFeeHistory(from, to, network, controller.signal)
+    setLoading(true);
+    setError(null);
+
+    void fetchAllFeeHistory(from, to, controller.signal)
       .then((items) => {
         setHistory(items);
         setError(null);
@@ -46,7 +49,7 @@ export function useFeeHistory(hours = 6, network: NetworkFilter = "all") {
       });
 
     return () => controller.abort();
-  }, [hours, network, requestVersion]);
+  }, [hours, requestVersion]);
 
   return {
     history: apiConfig.useMockData ? filterMockHistory(hours) : history,
