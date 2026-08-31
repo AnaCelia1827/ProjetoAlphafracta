@@ -4,23 +4,40 @@ import { useEffect, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
 import type { DataStatus, FeeSnapshot } from "@/types/fees";
 
-function calculateAge(snapshot: FeeSnapshot | null, now: number): number | null {
+type Clock = { startedAt: number; now: number };
+
+const initialClock: Clock = { startedAt: 0, now: 0 };
+
+function calculateAge(snapshot: FeeSnapshot | null, clock: Clock): number | null {
   if (!snapshot) return null;
-  const timestampAge = Math.max(0, now - Date.parse(snapshot.timestamp));
+
+  if (clock.now === 0) return snapshot.dataAgeMs;
+  if (apiConfig.useMockData) {
+    return snapshot.dataAgeMs + (clock.now - clock.startedAt);
+  }
+
+  const timestampAge = Math.max(0, clock.now - Date.parse(snapshot.timestamp));
   return Math.max(snapshot.dataAgeMs, timestampAge);
 }
 
 export function useDataAge(snapshot: FeeSnapshot | null) {
-  const [now, setNow] = useState(() => Date.now());
+  const [clock, setClock] = useState<Clock>(initialClock);
 
   useEffect(() => {
     if (!snapshot) return;
 
-    const interval = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(interval);
+    const startedAt = Date.now();
+    const update = () => setClock({ startedAt, now: Date.now() });
+    const firstUpdate = window.setTimeout(update, 0);
+    const interval = window.setInterval(update, 1_000);
+
+    return () => {
+      window.clearTimeout(firstUpdate);
+      window.clearInterval(interval);
+    };
   }, [snapshot]);
 
-  const ageMs = calculateAge(snapshot, now);
+  const ageMs = calculateAge(snapshot, clock);
 
   const dataStatus: DataStatus =
     ageMs === null

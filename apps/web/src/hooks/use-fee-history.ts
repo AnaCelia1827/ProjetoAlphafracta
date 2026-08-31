@@ -4,9 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
 import { fetchFeeHistory } from "@/lib/api/fetch-fee-history";
 import { mockFeeHistory } from "@/mocks/fee-snapshot";
-import type { FeeHistoryPoint } from "@/types/fees";
+import type { FeeHistoryPoint, NetworkFilter } from "@/types/fees";
 
-export function useFeeHistory(hours = 6) {
+function filterMockHistory(hours: number) {
+  const lastTimestamp = Date.parse(mockFeeHistory.at(-1)?.timestamp ?? "");
+  const cutoff = lastTimestamp - hours * 60 * 60 * 1_000;
+  return mockFeeHistory.filter((item) => Date.parse(item.timestamp) >= cutoff);
+}
+
+export function useFeeHistory(hours = 6, network: NetworkFilter = "all") {
   const [history, setHistory] = useState<FeeHistoryPoint[]>(
     apiConfig.useMockData ? mockFeeHistory : [],
   );
@@ -14,6 +20,7 @@ export function useFeeHistory(hours = 6) {
   const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
   const refresh = useCallback(() => {
+    if (apiConfig.useMockData) return;
     setLoading(true);
     setError(null);
     setRequestVersion((value) => value + 1);
@@ -25,7 +32,7 @@ export function useFeeHistory(hours = 6) {
     const controller = new AbortController();
     const to = new Date();
     const from = new Date(to.getTime() - hours * 60 * 60 * 1_000);
-    void fetchFeeHistory(from, to, controller.signal)
+    void fetchFeeHistory(from, to, network, controller.signal)
       .then((items) => {
         setHistory(items);
         setError(null);
@@ -39,7 +46,12 @@ export function useFeeHistory(hours = 6) {
       });
 
     return () => controller.abort();
-  }, [hours, requestVersion]);
+  }, [hours, network, requestVersion]);
 
-  return { history, loading, error, refresh };
+  return {
+    history: apiConfig.useMockData ? filterMockHistory(hours) : history,
+    loading,
+    error,
+    refresh,
+  };
 }

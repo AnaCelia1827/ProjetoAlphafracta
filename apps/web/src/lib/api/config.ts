@@ -2,14 +2,15 @@ const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").repl
   /\/+$/,
   "",
 );
+const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
 export const apiConfig = {
   apiUrl,
   streamUrl: `${apiUrl}/stream`,
   historyUrl: `${apiUrl}/fees/history`,
   recentBlocksUrl: `${apiUrl}/blocks/recent`,
-  useMockData: process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true",
+  useMockData,
   enableRecentBlocks:
-    process.env.NEXT_PUBLIC_ENABLE_RECENT_BLOCKS === "true",
+    useMockData || process.env.NEXT_PUBLIC_ENABLE_RECENT_BLOCKS === "true",
   staleAfterMs: 15_000,
 };

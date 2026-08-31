@@ -1,7 +1,7 @@
 import type { FeeHistoryPoint, FeeSnapshot } from "@/types/fees";
 
 export const mockFeeSnapshot: FeeSnapshot = {
-  timestamp: new Date().toISOString(),
+  timestamp: "2026-08-25T15:42:15-03:00",
   metadata: { network: "ethereum-mainnet" },
   recommendedMaxFeeGwei: 32.4,
   recommendedPriorityFeeGwei: 1.8,

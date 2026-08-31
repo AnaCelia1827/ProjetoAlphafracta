@@ -44,10 +44,13 @@ export function FeeHistoryChart({ history, loading, error, onRefresh }: Props) {
       <div className={styles.graph}>
         <div className={styles.yAxis}><span>{Math.ceil(maxValue)}</span><span>{Math.ceil(maxValue / 2)}</span><span>0 Gwei</span></div>
         <svg role="img" aria-label="Histórico de taxas recomendadas em Gwei" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-          <defs><linearGradient id="feeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8b5cf6" stopOpacity=".35" /><stop offset="1" stopColor="#8b5cf6" stopOpacity="0" /></linearGradient></defs>
+          <defs>
+            <linearGradient id="feeArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#123bbf" stopOpacity=".38" /><stop offset="1" stopColor="#020068" stopOpacity="0" /></linearGradient>
+            <linearGradient id="feeLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#1946e5" /><stop offset=".55" stopColor="#0b2b9c" /><stop offset="1" stopColor="#020068" /></linearGradient>
+          </defs>
           <polygon points={areaPoints} fill="url(#feeArea)" />
-          <polyline points={maxFeePoints} fill="none" stroke="#8b5cf6" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-          <polyline points={priorityPoints} fill="none" stroke="#3b82f6" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+          <polyline points={maxFeePoints} fill="none" stroke="url(#feeLine)" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+          <polyline points={priorityPoints} fill="none" stroke="#315fd1" strokeWidth="3" vectorEffect="non-scaling-stroke" />
         </svg>
       </div>
       <div className={styles.xAxis}>{history.filter((_, index) => index % labelStep === 0).map((item) => <span key={item.timestamp}>{formatTime(item.timestamp)}</span>)}</div>

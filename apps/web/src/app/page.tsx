@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
+import { DashboardFilters } from "@/components/dashboard-filters";
 import { DataStatus } from "@/components/data-status";
 import { FeeCard } from "@/components/fee-card";
 import { FeeHistoryChart } from "@/components/fee-history-chart";
@@ -9,20 +11,32 @@ import { useDataAge } from "@/hooks/use-data-age";
 import { useFeeHistory } from "@/hooks/use-fee-history";
 import { useFeeStream } from "@/hooks/use-fee-stream";
 import { useRecentBlocks } from "@/hooks/use-recent-blocks";
+import type { HistoryRangeHours, NetworkFilter } from "@/types/fees";
 import styles from "./page.module.css";
 
 export default function Home() {
-  const { snapshot, connectionStatus, error: streamError } = useFeeStream();
+  const [network, setNetwork] = useState<NetworkFilter>("all");
+  const [rangeHours, setRangeHours] = useState<HistoryRangeHours>(24);
+  const [blockSearch, setBlockSearch] = useState("");
+  const { snapshot, connectionStatus, error: streamError, refresh: refreshStream } = useFeeStream();
   const { ageMs, dataStatus } = useDataAge(snapshot);
-  const history = useFeeHistory();
-  const recentBlocks = useRecentBlocks();
+  const history = useFeeHistory(rangeHours, network);
+  const recentBlocks = useRecentBlocks(20, network, blockSearch);
 
   return <>
     <DashboardHeader status={connectionStatus} />
-    <main className={styles.page} id="live">
-      <section className={styles.summary}>
+    <main className={styles.page} id="dashboard">
+      <DashboardFilters
+        network={network}
+        rangeHours={rangeHours}
+        search={blockSearch}
+        onNetworkChange={setNetwork}
+        onRangeChange={setRangeHours}
+        onSearchChange={setBlockSearch}
+      />
+      <section className={styles.summary} id="live">
         <FeeCard snapshot={snapshot} ageMs={ageMs} />
-        <DataStatus snapshot={snapshot} connectionStatus={connectionStatus} dataStatus={dataStatus} error={streamError} />
+        <DataStatus snapshot={snapshot} connectionStatus={connectionStatus} dataStatus={dataStatus} error={streamError} onRefresh={refreshStream} />
       </section>
       <FeeHistoryChart history={history.history} loading={history.loading} error={history.error} onRefresh={history.refresh} />
       <RecentBlocks enabled={recentBlocks.enabled} blocks={recentBlocks.blocks} loading={recentBlocks.loading} error={recentBlocks.error} onRefresh={recentBlocks.refresh} />

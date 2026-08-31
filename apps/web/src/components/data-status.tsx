@@ -14,21 +14,30 @@ type DataStatusProps = {
   connectionStatus: ConnectionStatus;
   dataStatus: SnapshotDataStatus;
   error: string | null;
+  onRefresh: () => void;
 };
 
-export function DataStatus({ snapshot, connectionStatus, dataStatus, error }: DataStatusProps) {
+export function DataStatus({ snapshot, connectionStatus, dataStatus, error, onRefresh }: DataStatusProps) {
   const updatedAt = snapshot ? new Date(snapshot.timestamp).toLocaleTimeString("pt-BR") : "—";
   const persistenceDegraded = snapshot?.health && snapshot.health.persistence !== "connected";
 
   return <article className={`${styles.panel} ${styles.confidence}`}>
     <div className={styles.panelTitle}><span>Status dos dados</span><Image src="/figma/dashboard.svg" alt="" width={16} height={4} /></div>
-    <p className={`${styles.dataStatus} ${styles[dataStatus]}`}>{dataStatusLabels[dataStatus]}</p>
-    <div className={styles.sourceList}>
-      <p><span>Stream</span><strong>{connectionLabels[connectionStatus]}</strong></p>
-      <p><span>Mempool</span><strong>{snapshot?.sources.mempool ?? "—"}</strong></p>
-      <p><span>Cotação</span><strong>{snapshot?.sources.price ?? "—"}</strong></p>
-      <p><span>Última atualização</span><strong>{updatedAt}</strong></p>
+    <div className={styles.statusSummary}>
+      <p className={`${styles.dataStatus} ${styles[dataStatus]}`}>{dataStatusLabels[dataStatus]}</p>
+      <span>{connectionLabels[connectionStatus]} · {updatedAt}</span>
     </div>
+    <div className={styles.samples}>
+      <div className={dataStatus === "stale" ? styles.staleSource : styles.primarySource}>
+        <strong>{snapshot?.sources.mempool ?? "—"}</strong>
+        <span>Mempool</span>
+      </div>
+      <div>
+        <strong>{snapshot?.sources.price ?? "—"}</strong>
+        <span>Cotação ETH/USD</span>
+      </div>
+    </div>
+    <button className={styles.refresh} type="button" onClick={onRefresh}>Atualizar dados</button>
     {!snapshot && <p className={styles.noData}>Aguardando o primeiro snapshot da API.</p>}
     {persistenceDegraded && <p className={styles.warning}>Dados ao vivo ativos; persistência do histórico degradada.</p>}
     {error && <p className={styles.errorMessage}>{error}</p>}

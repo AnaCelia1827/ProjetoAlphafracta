@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
 import { parseFeeSnapshot } from "@/lib/api/parsers";
 import { mockFeeSnapshot } from "@/mocks/fee-snapshot";
@@ -14,6 +14,18 @@ export function useFeeStream() {
     apiConfig.useMockData ? mockFeeSnapshot : null,
   );
   const [error, setError] = useState<string | null>(null);
+  const [connectionVersion, setConnectionVersion] = useState(0);
+
+  const refresh = useCallback(() => {
+    setError(null);
+    if (apiConfig.useMockData) {
+      setSnapshot({ ...mockFeeSnapshot, timestamp: new Date().toISOString() });
+      return;
+    }
+
+    setConnectionStatus("connecting");
+    setConnectionVersion((version) => version + 1);
+  }, []);
 
   useEffect(() => {
     if (apiConfig.useMockData) return;
@@ -66,7 +78,7 @@ export function useFeeStream() {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
     };
-  }, []);
+  }, [connectionVersion]);
 
-  return { snapshot, connectionStatus, error };
+  return { snapshot, connectionStatus, error, refresh };
 }

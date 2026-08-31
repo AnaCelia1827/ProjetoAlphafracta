@@ -130,6 +130,16 @@ function parseRecentBlock(value: unknown): RecentBlock | null {
     timestamp: value.timestamp,
     transactionCount: value.transactionCount,
     baseFeeGwei: value.baseFeeGwei,
+    ...(isFiniteNumber(value.priorityFeeGwei)
+      ? { priorityFeeGwei: value.priorityFeeGwei }
+      : {}),
+    ...(value.status === "confirmed" || value.status === "pending"
+      ? { status: value.status }
+      : {}),
+    ...(value.condition === "normal" || value.condition === "elevated"
+      ? { condition: value.condition }
+      : {}),
+    ...(value.provider === "alchemy" ? { provider: value.provider } : {}),
   };
 }
 

@@ -6,6 +6,9 @@ export type ConnectionStatus =
 
 export type DataStatus = "fresh" | "stale" | "unavailable";
 
+export type NetworkFilter = "all" | "ethereum-mainnet";
+export type HistoryRangeHours = 1 | 6 | 24;
+
 export type ServiceStatus =
   | "connected"
   | "reconnecting"
