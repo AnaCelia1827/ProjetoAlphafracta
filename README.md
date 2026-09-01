@@ -1,19 +1,20 @@
-# Alphractal
+# Aba Fees da plataforma Alphractal
 
-Monitor em tempo real de taxas e blocos da Ethereum Mainnet. O Alphractal
+Este repositório contém o projeto desenvolvido para melhorar a aba de fees da
+plataforma Alphractal. A solução monitora taxas e blocos da Ethereum Mainnet e
 combina dados da Alchemy com a cotação pública ETH/USD da Coinbase para exibir
-uma recomendação de taxa, estimar o custo de uma transferência e acompanhar
-blocos recentes em um dashboard web.
+recomendações de taxa, estimar o custo de uma transferência e acompanhar blocos
+recentes em um dashboard web.
 
-> O projeto é somente de leitura: ele não conecta carteiras, assina transações
+> A solução é somente de leitura: ela não conecta carteiras, assina transações
 > nem envia operações para a blockchain.
 
 ## Sobre o projeto
 
-O Alphractal transforma sinais da mempool e da blockchain em informações mais
-fáceis de interpretar. O backend calcula as métricas, mantém o último estado em
-memória, transmite atualizações por Server-Sent Events (SSE) e, quando o
-MongoDB está configurado, persiste o histórico por até 30 dias.
+A melhoria da aba Fees transforma sinais da mempool e da blockchain em
+informações mais fáceis de interpretar. O backend calcula as métricas, mantém o
+último estado em memória, transmite atualizações por Server-Sent Events (SSE)
+e, quando o MongoDB está configurado, persiste o histórico por até 30 dias.
 
 O navegador nunca acessa diretamente a Alchemy, a Coinbase ou o MongoDB. O
 frontend Next.js encaminha as requisições feitas em `/api/v1` para a API
