@@ -8,6 +8,7 @@ describe("API configuration", () => {
       currentFeeUrl: "/api/v1/fees/current",
       historyUrl: "/api/v1/fees/history",
       recentBlocksUrl: "/api/v1/blocks/recent",
+      blockHistoryUrl: "/api/v1/blocks/history",
       streamUrl: "/api/v1/live/stream",
     });
   });

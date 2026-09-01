@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import styles from "@/app/page.module.css";
 import type { LiveConnection } from "@/types/fees";
@@ -19,7 +20,7 @@ const connectionClasses: Record<LiveConnection, string> = {
   offline: styles.disconnected,
 };
 
-type NavIconName = "dashboard" | "history" | "live";
+type NavIconName = "dashboard" | "history" | "blocks";
 
 function NavIcon({ name }: { name: NavIconName }) {
   if (name === "dashboard") {
@@ -54,11 +55,15 @@ function ConnectionPlugIcon() {
 export function DashboardHeader({
   status,
   demo = false,
+  activePage = "dashboard",
 }: {
-  status: LiveConnection;
+  status?: LiveConnection;
   demo?: boolean;
+  activePage?: "dashboard" | "blocks";
 }) {
-  const [activeItem, setActiveItem] = useState<"dashboard" | "history" | "live">("live");
+  const [activeItem, setActiveItem] = useState<
+    "dashboard" | "history" | "blocks"
+  >(activePage === "blocks" ? "blocks" : "dashboard");
 
   return <header className={styles.header}>
     <div className={styles.logo}>
@@ -72,16 +77,18 @@ export function DashboardHeader({
       />
     </div>
     <nav className={styles.nav}>
-      <a className={activeItem === "dashboard" ? styles.active : ""} href="#recent-blocks" aria-current={activeItem === "dashboard" ? "location" : undefined} onClick={() => setActiveItem("dashboard")}><NavIcon name="dashboard" />Dashboard</a>
-      <a className={activeItem === "history" ? styles.active : ""} href="#history" aria-current={activeItem === "history" ? "location" : undefined} onClick={() => setActiveItem("history")}><NavIcon name="history" />Histórico</a>
-      <a className={activeItem === "live" ? styles.active : ""} href="#live" aria-current={activeItem === "live" ? "location" : undefined} onClick={() => setActiveItem("live")}><NavIcon name="live" />Monitor ao vivo</a>
+      <Link className={activeItem === "dashboard" ? styles.active : ""} href="/" aria-current={activeItem === "dashboard" ? "page" : undefined} onClick={() => setActiveItem("dashboard")}><NavIcon name="dashboard" />Visão geral</Link>
+      <Link className={activeItem === "history" ? styles.active : ""} href="/#history" aria-current={activeItem === "history" ? "location" : undefined} onClick={() => setActiveItem("history")}><NavIcon name="history" />Histórico</Link>
+      <Link className={activeItem === "blocks" ? styles.active : ""} href="/blocos" aria-current={activeItem === "blocks" ? "page" : undefined} onClick={() => setActiveItem("blocks")}><NavIcon name="blocks" />Blocos</Link>
     </nav>
     <div className={styles.headerStatus}>
       {demo && <span className={styles.demoBadge}>Demo</span>}
-      <span className={`${styles.connection} ${connectionClasses[status]}`} role="status" aria-live="polite">
-      <ConnectionPlugIcon />
-      {connectionLabels[status]}
-      </span>
+      {status && (
+        <span className={`${styles.connection} ${connectionClasses[status]}`} role="status" aria-live="polite">
+          <ConnectionPlugIcon />
+          {connectionLabels[status]}
+        </span>
+      )}
     </div>
   </header>;
 }

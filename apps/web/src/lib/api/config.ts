@@ -6,6 +6,7 @@ export const apiConfig = {
   currentFeeUrl: "/api/v1/fees/current",
   historyUrl: "/api/v1/fees/history",
   recentBlocksUrl: "/api/v1/blocks/recent",
+  blockHistoryUrl: "/api/v1/blocks/history",
   blockUrl: (identifier: string) =>
     `/api/v1/blocks/${encodeURIComponent(identifier)}`,
   streamUrl: "/api/v1/live/stream",

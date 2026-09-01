@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../../api/src/app.js";
 import { blockSummary, feeSnapshot } from "../../api/test/helpers/fixtures.js";
+import { fetchBlockHistory } from "@/lib/api/fetch-block-history";
 import { fetchCurrentFee } from "@/lib/api/fetch-current-fee";
 import { fetchRecentBlocks } from "@/lib/api/fetch-recent-blocks";
 
@@ -48,5 +49,15 @@ describe("web client against Express", () => {
     await expect(
       fetchRecentBlocks(undefined, `${origin}/api/v1/blocks/recent`),
     ).resolves.toHaveLength(1);
+    await expect(
+      fetchBlockHistory({
+        limit: 10,
+        signal: undefined,
+        url: `${origin}/api/v1/blocks/history`,
+      }),
+    ).resolves.toMatchObject({
+      blocks: [expect.objectContaining({ number: "23548192" })],
+      nextCursor: null,
+    });
   });
 });
