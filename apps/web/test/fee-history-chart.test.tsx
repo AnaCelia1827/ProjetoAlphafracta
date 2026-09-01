@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FeeHistoryChart } from "@/components/fee-history-chart";
@@ -96,5 +96,64 @@ describe("FeeHistoryChart", () => {
     expect(
       screen.getByText("Histórico em USD indisponível neste período."),
     ).toBeVisible();
+  });
+
+  it("does not label an older priced snapshot as the current cost", () => {
+    render(
+      <FeeHistoryChart
+        {...baseProps}
+        history={[
+          {
+            timestamp: "2026-08-31T03:00:00.000Z",
+            recommendedMaxFeeGwei: 50,
+            recommendedPriorityFeeGwei: 1.8,
+            maxCostUsd: 2.31,
+          },
+          {
+            timestamp: "2026-08-31T03:01:00.000Z",
+            recommendedMaxFeeGwei: 52,
+            recommendedPriorityFeeGwei: 1.9,
+          },
+        ]}
+      />,
+    );
+
+    const currentMetric = screen.getByText("CUSTO ATUAL").parentElement;
+    expect(currentMetric).toHaveTextContent("CUSTO ATUAL—");
+    expect(currentMetric).not.toHaveTextContent(/US\$\s*2,31/);
+  });
+
+  it("does not calculate variation across an unpriced snapshot", () => {
+    render(
+      <FeeHistoryChart
+        {...baseProps}
+        history={[
+          {
+            timestamp: "2026-08-31T03:00:00.000Z",
+            recommendedMaxFeeGwei: 45,
+            recommendedPriorityFeeGwei: 1.6,
+            maxCostUsd: 2,
+          },
+          {
+            timestamp: "2026-08-31T03:01:00.000Z",
+            recommendedMaxFeeGwei: 48,
+            recommendedPriorityFeeGwei: 1.7,
+          },
+          {
+            timestamp: "2026-08-31T03:02:00.000Z",
+            recommendedMaxFeeGwei: 50,
+            recommendedPriorityFeeGwei: 1.8,
+            maxCostUsd: 2.4,
+          },
+        ]}
+      />,
+    );
+
+    const variationMetric = screen.getByText("VARIAÇÃO RECENTE").parentElement;
+    expect(variationMetric).toHaveTextContent("VARIAÇÃO RECENTE—");
+    expect(variationMetric).not.toHaveTextContent(/\+US\$\s*0,40/);
+
+    fireEvent.focus(screen.getByLabelText(/gráfico interativo do custo em USD/i));
+    expect(screen.getByRole("status")).not.toHaveTextContent(/\+US\$\s*0,40/);
   });
 });

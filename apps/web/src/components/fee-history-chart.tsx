@@ -98,8 +98,8 @@ export function FeeHistoryChart({
     ? pricedHistory.reduce((total, item) => total + item.maxCostUsd, 0) /
       pricedHistory.length
     : undefined;
-  const current = pricedHistory.at(-1)?.maxCostUsd;
-  const previous = pricedHistory.at(-2)?.maxCostUsd;
+  const current = history.at(-1)?.maxCostUsd;
+  const previous = history.at(-2)?.maxCostUsd;
   const currentVariation =
     current === undefined || previous === undefined
       ? undefined
@@ -109,10 +109,9 @@ export function FeeHistoryChart({
       ? null
       : Math.min(hoveredIndex, pricedPoints.length - 1);
   const activePoint = activeIndex === null ? null : pricedPoints[activeIndex];
-  const activePrevious =
-    activeIndex === null || activeIndex === 0
-      ? undefined
-      : pricedPoints[activeIndex - 1]?.item.maxCostUsd;
+  const activePrevious = activePoint
+    ? history[activePoint.historyIndex - 1]?.maxCostUsd
+    : undefined;
   const activeVariation =
     activePoint === null || activePrevious === undefined
       ? undefined
