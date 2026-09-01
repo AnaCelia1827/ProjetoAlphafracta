@@ -1,9 +1,9 @@
-import { FeeHistoryResponseSchema } from "@alphractal/contracts";
-import { apiConfig } from "@/lib/api/config";
-import { fetchJson } from "@/lib/api/fetch-json";
-import { toHistoryPoint } from "@/lib/api/view-models";
-import { downsampleHistory } from "@/lib/history/downsample";
-import type { FeeHistoryPoint } from "@/types/fees";
+import { FeeHistoryResponseSchema } from '@alphractal/contracts';
+import { apiConfig } from '@/lib/api/config';
+import { fetchJson } from '@/lib/api/fetch-json';
+import { toHistoryPoint } from '@/lib/api/view-models';
+import { downsampleHistory } from '@/lib/history/downsample';
+import type { FeeHistoryPoint } from '@/types/fees';
 
 const HISTORY_PAGE_LIMIT = 5000;
 const MAXIMUM_CHART_POINTS = 288;
@@ -27,7 +27,7 @@ export async function fetchAllFeeHistory(
     });
 
     if (cursor) {
-      query.set("cursor", cursor);
+      query.set('cursor', cursor);
     }
 
     const response = await fetchJson(
@@ -39,7 +39,7 @@ export async function fetchAllFeeHistory(
 
     const nextCursor = response.page.nextCursor;
     if (nextCursor && seenCursors.has(nextCursor)) {
-      throw new Error("A API repetiu o cursor do histórico.");
+      throw new Error('A API repetiu o cursor do histórico.');
     }
 
     if (nextCursor) {

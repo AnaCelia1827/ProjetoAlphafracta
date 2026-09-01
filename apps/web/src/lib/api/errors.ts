@@ -1,4 +1,4 @@
-import type { ApiErrorCode } from "@alphractal/contracts";
+import type { ApiErrorCode } from '@alphractal/contracts';
 
 export class ApiClientError extends Error {
   constructor(
@@ -9,6 +9,6 @@ export class ApiClientError extends Error {
     readonly details?: ReadonlyArray<{ field: string; issue: string }>,
   ) {
     super(message);
-    this.name = "ApiClientError";
+    this.name = 'ApiClientError';
   }
 }

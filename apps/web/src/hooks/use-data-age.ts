@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { apiConfig } from "@/lib/api/config";
-import type { DataStatus, FeeViewModel } from "@/types/fees";
+import { useEffect, useState } from 'react';
+import { apiConfig } from '@/lib/api/config';
+import type { DataStatus, FeeViewModel } from '@/types/fees';
 
 type Clock = { startedAt: number; now: number };
 
@@ -40,11 +40,7 @@ export function useDataAge(snapshot: FeeViewModel | null) {
   const ageMs = calculateAge(snapshot, clock);
 
   const dataStatus: DataStatus =
-    ageMs === null
-      ? "unavailable"
-      : ageMs >= apiConfig.staleAfterMs
-        ? "stale"
-        : "fresh";
+    ageMs === null ? 'unavailable' : ageMs >= apiConfig.staleAfterMs ? 'stale' : 'fresh';
 
   return { ageMs, dataStatus };
 }

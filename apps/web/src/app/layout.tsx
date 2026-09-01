@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import "./globals.css";
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Alphractal Fees",
-  description: "Monitoramento de taxas da rede Ethereum em tempo real.",
+  title: 'Alphractal Fees',
+  description: 'Monitoramento de taxas da rede Ethereum em tempo real.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

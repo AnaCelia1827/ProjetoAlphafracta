@@ -1,25 +1,18 @@
-"use client";
+'use client';
 
-import type {
-  BlockSummaryDto,
-  FeeSnapshotDto,
-  LiveEventDto,
-} from "@alphractal/contracts";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiConfig } from "@/lib/api/config";
-import { ApiClientError } from "@/lib/api/errors";
-import { fetchCurrentFee } from "@/lib/api/fetch-current-fee";
-import { fetchRecentBlocks } from "@/lib/api/fetch-recent-blocks";
-import { parseLiveMessage } from "@/lib/api/parsers";
-import { toBlockViewModel, toFeeViewModel } from "@/lib/api/view-models";
-import {
-  reduceLiveEvent,
-  type LiveMonitorState,
-} from "@/lib/live/live-reducer";
-import { mockFeeSnapshot } from "@/mocks/fee-snapshot";
-import { mockRecentBlocks } from "@/mocks/recent-blocks";
-import type { BlockViewModel } from "@/types/blocks";
-import type { FeeViewModel, LiveConnection } from "@/types/fees";
+import type { BlockSummaryDto, FeeSnapshotDto, LiveEventDto } from '@alphractal/contracts';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { apiConfig } from '@/lib/api/config';
+import { ApiClientError } from '@/lib/api/errors';
+import { fetchCurrentFee } from '@/lib/api/fetch-current-fee';
+import { fetchRecentBlocks } from '@/lib/api/fetch-recent-blocks';
+import { parseLiveMessage } from '@/lib/api/parsers';
+import { toBlockViewModel, toFeeViewModel } from '@/lib/api/view-models';
+import { reduceLiveEvent, type LiveMonitorState } from '@/lib/live/live-reducer';
+import { mockFeeSnapshot } from '@/mocks/fee-snapshot';
+import { mockRecentBlocks } from '@/mocks/recent-blocks';
+import type { BlockViewModel } from '@/types/blocks';
+import type { FeeViewModel, LiveConnection } from '@/types/fees';
 
 export type UseLiveMonitorResult = {
   fee: FeeViewModel | null;
@@ -36,14 +29,11 @@ function asApiClientError(reason: unknown, fallback: string) {
     return reason;
   }
 
-  return new ApiClientError(
-    reason instanceof Error ? reason.message : fallback,
-    0,
-  );
+  return new ApiClientError(reason instanceof Error ? reason.message : fallback, 0);
 }
 
 function isAbortError(reason: unknown) {
-  return reason instanceof DOMException && reason.name === "AbortError";
+  return reason instanceof DOMException && reason.name === 'AbortError';
 }
 
 export function useLiveMonitor(): UseLiveMonitorResult {
@@ -58,14 +48,12 @@ export function useLiveMonitor(): UseLiveMonitorResult {
   });
   const [connection, setConnection] = useState<LiveConnection>(() =>
     apiConfig.useMockData
-      ? "live"
-      : typeof navigator !== "undefined" && !navigator.onLine
-      ? "offline"
-      : "connecting",
+      ? 'live'
+      : typeof navigator !== 'undefined' && !navigator.onLine
+        ? 'offline'
+        : 'connecting',
   );
-  const [bootstrapLoading, setBootstrapLoading] = useState(
-    !apiConfig.useMockData,
-  );
+  const [bootstrapLoading, setBootstrapLoading] = useState(!apiConfig.useMockData);
   const [feeError, setFeeError] = useState<ApiClientError | null>(null);
   const [blocksError, setBlocksError] = useState<ApiClientError | null>(null);
 
@@ -79,7 +67,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
           dataAgeMs: 0,
         },
       }));
-      setConnection("live");
+      setConnection('live');
       return;
     }
 
@@ -94,7 +82,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
     if (signal?.aborted) {
       controller.abort();
     } else {
-      signal?.addEventListener("abort", abortFromCaller, { once: true });
+      signal?.addEventListener('abort', abortFromCaller, { once: true });
     }
 
     bootstrapInFlightRef.current = true;
@@ -107,10 +95,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
         fetchRecentBlocks(controller.signal),
       ]);
 
-      if (
-        controller.signal.aborted ||
-        bootstrapControllerRef.current !== controller
-      ) {
+      if (controller.signal.aborted || bootstrapControllerRef.current !== controller) {
         return;
       }
 
@@ -118,28 +103,24 @@ export function useLiveMonitor(): UseLiveMonitorResult {
       let nextBlocks: BlockSummaryDto[] | undefined;
       let degraded = false;
 
-      if (feeResult.status === "fulfilled") {
+      if (feeResult.status === 'fulfilled') {
         nextFee = feeResult.value;
         resourceErrorsRef.current.fee = false;
         setFeeError(null);
       } else if (!isAbortError(feeResult.reason)) {
         degraded = true;
         resourceErrorsRef.current.fee = true;
-        setFeeError(
-          asApiClientError(feeResult.reason, "Falha ao carregar as taxas."),
-        );
+        setFeeError(asApiClientError(feeResult.reason, 'Falha ao carregar as taxas.'));
       }
 
-      if (blocksResult.status === "fulfilled") {
+      if (blocksResult.status === 'fulfilled') {
         nextBlocks = blocksResult.value;
         resourceErrorsRef.current.blocks = false;
         setBlocksError(null);
       } else if (!isAbortError(blocksResult.reason)) {
         degraded = true;
         resourceErrorsRef.current.blocks = true;
-        setBlocksError(
-          asApiClientError(blocksResult.reason, "Falha ao carregar os blocos."),
-        );
+        setBlocksError(asApiClientError(blocksResult.reason, 'Falha ao carregar os blocos.'));
       }
 
       if (nextFee !== undefined || nextBlocks !== undefined) {
@@ -153,14 +134,12 @@ export function useLiveMonitor(): UseLiveMonitorResult {
       }
 
       if (degraded) {
-        setConnection((current) =>
-          current === "offline" ? current : "degraded",
-        );
+        setConnection((current) => (current === 'offline' ? current : 'degraded'));
       } else if (streamOpenRef.current) {
-        setConnection("live");
+        setConnection('live');
       }
     } finally {
-      signal?.removeEventListener("abort", abortFromCaller);
+      signal?.removeEventListener('abort', abortFromCaller);
       if (bootstrapControllerRef.current === controller) {
         bootstrapControllerRef.current = null;
         bootstrapInFlightRef.current = false;
@@ -183,9 +162,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
     const handleOpen = () => {
       streamOpenRef.current = true;
       setConnection(
-        resourceErrorsRef.current.fee || resourceErrorsRef.current.blocks
-          ? "degraded"
-          : "live",
+        resourceErrorsRef.current.fee || resourceErrorsRef.current.blocks ? 'degraded' : 'live',
       );
       if (openedOnce) {
         void bootstrap(controller.signal);
@@ -207,7 +184,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
         }
         setLiveState((current) => reduceLiveEvent(current, parsed));
 
-        if (parsed.event === "fee-snapshot") {
+        if (parsed.event === 'fee-snapshot') {
           resourceErrorsRef.current.fee = false;
           setFeeError(null);
         } else {
@@ -215,54 +192,49 @@ export function useLiveMonitor(): UseLiveMonitorResult {
           setBlocksError(null);
         }
         setConnection(
-          resourceErrorsRef.current.fee || resourceErrorsRef.current.blocks
-            ? "degraded"
-            : "live",
+          resourceErrorsRef.current.fee || resourceErrorsRef.current.blocks ? 'degraded' : 'live',
         );
       } catch (reason) {
-        const error = asApiClientError(
-          reason,
-          "A API enviou um evento ao vivo inválido.",
-        );
-        if (eventName === "fee-snapshot") {
+        const error = asApiClientError(reason, 'A API enviou um evento ao vivo inválido.');
+        if (eventName === 'fee-snapshot') {
           resourceErrorsRef.current.fee = true;
           setFeeError(error);
         } else {
           resourceErrorsRef.current.blocks = true;
           setBlocksError(error);
         }
-        setConnection("degraded");
+        setConnection('degraded');
       }
     };
 
-    const handleFee = handleEvent("fee-snapshot");
-    const handleBlockAdded = handleEvent("block-added");
-    const handleBlockStatus = handleEvent("block-status-changed");
+    const handleFee = handleEvent('fee-snapshot');
+    const handleBlockAdded = handleEvent('block-added');
+    const handleBlockStatus = handleEvent('block-status-changed');
     const handleError = () => {
       streamOpenRef.current = false;
-      setConnection(navigator.onLine ? "degraded" : "offline");
+      setConnection(navigator.onLine ? 'degraded' : 'offline');
     };
     const handleOffline = () => {
       streamOpenRef.current = false;
-      setConnection("offline");
+      setConnection('offline');
     };
-    const handleOnline = () => setConnection("connecting");
+    const handleOnline = () => setConnection('connecting');
 
-    stream.addEventListener("open", handleOpen);
-    stream.addEventListener("error", handleError);
-    stream.addEventListener("fee-snapshot", handleFee);
-    stream.addEventListener("block-added", handleBlockAdded);
-    stream.addEventListener("block-status-changed", handleBlockStatus);
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
+    stream.addEventListener('open', handleOpen);
+    stream.addEventListener('error', handleError);
+    stream.addEventListener('fee-snapshot', handleFee);
+    stream.addEventListener('block-added', handleBlockAdded);
+    stream.addEventListener('block-status-changed', handleBlockStatus);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
 
     return () => {
       controller.abort();
       bootstrapControllerRef.current?.abort();
       streamOpenRef.current = false;
       stream.close();
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
     };
   }, [bootstrap]);
 
@@ -270,10 +242,7 @@ export function useLiveMonitor(): UseLiveMonitorResult {
     () => (liveState.fee ? toFeeViewModel(liveState.fee) : null),
     [liveState.fee],
   );
-  const blocks = useMemo(
-    () => liveState.blocks.map(toBlockViewModel),
-    [liveState.blocks],
-  );
+  const blocks = useMemo(() => liveState.blocks.map(toBlockViewModel), [liveState.blocks]);
 
   return {
     fee,

@@ -1,28 +1,28 @@
-import styles from "@/app/page.module.css";
-import type { DataStatus as SnapshotDataStatus, FeeViewModel } from "@/types/fees";
+import styles from '@/app/page.module.css';
+import type { DataStatus as SnapshotDataStatus, FeeViewModel } from '@/types/fees';
 
 const dataStatusLabels: Record<SnapshotDataStatus, string> = {
-  fresh: "Dados ao vivo",
-  stale: "Dados desatualizados",
-  unavailable: "Aguardando dados",
+  fresh: 'Dados ao vivo',
+  stale: 'Dados desatualizados',
+  unavailable: 'Aguardando dados',
 };
 
-const reasonLabels: Record<FeeViewModel["confidence"]["reasons"][number], string> = {
-  "fresh-data": "Dados recentes",
-  "stable-fees": "Taxas estáveis",
-  "strong-sample": "Amostra robusta",
-  "aging-data": "Dados envelhecendo",
-  "volatile-fees": "Taxas voláteis",
-  "weak-sample": "Amostra reduzida",
-  "missing-data": "Dados ausentes",
+const reasonLabels: Record<FeeViewModel['confidence']['reasons'][number], string> = {
+  'fresh-data': 'Dados recentes',
+  'stable-fees': 'Taxas estáveis',
+  'strong-sample': 'Amostra robusta',
+  'aging-data': 'Dados envelhecendo',
+  'volatile-fees': 'Taxas voláteis',
+  'weak-sample': 'Amostra reduzida',
+  'missing-data': 'Dados ausentes',
 };
 
 const sourceStatusLabels: Record<string, string> = {
-  fresh: "Atualizado",
-  stale: "Desatualizado",
-  unavailable: "Indisponível",
-  available: "Disponível",
-  degraded: "Degradado",
+  fresh: 'Atualizado',
+  stale: 'Desatualizado',
+  unavailable: 'Indisponível',
+  available: 'Disponível',
+  degraded: 'Degradado',
 };
 
 type DataStatusProps = {
@@ -31,14 +31,8 @@ type DataStatusProps = {
   error: string | null;
 };
 
-export function DataStatus({
-  snapshot,
-  dataStatus,
-  error,
-}: DataStatusProps) {
-  const updatedAt = snapshot
-    ? new Date(snapshot.timestamp).toLocaleTimeString("pt-BR")
-    : "—";
+export function DataStatus({ snapshot, dataStatus, error }: DataStatusProps) {
+  const updatedAt = snapshot ? new Date(snapshot.timestamp).toLocaleTimeString('pt-BR') : '—';
 
   return (
     <article className={`${styles.panel} ${styles.confidence}`}>
@@ -70,8 +64,7 @@ export function DataStatus({
 
       {error && <p className={styles.errorMessage}>{error}</p>}
       <p className={styles.disclaimer}>
-        Recomendação baseada em dados da Ethereum Mainnet observados pela
-        Alchemy.
+        Recomendação baseada em dados da Ethereum Mainnet observados pela Alchemy.
       </p>
     </article>
   );
