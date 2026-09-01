@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import styles from "@/app/page.module.css";
+import { BlockIcon } from "@/components/block-icon";
 import { Metric } from "@/components/metric";
 import type { BlockViewModel } from "@/types/blocks";
 
@@ -52,6 +54,7 @@ export function RecentBlocks({
     hash: string;
     message: string;
   } | null>(null);
+  const visibleBlocks = blocks.slice(0, 10);
 
   if ((loading || searching) && blocks.length === 0 && !searchedBlock) {
     return (
@@ -146,7 +149,7 @@ export function RecentBlocks({
             Voltar ao vivo
           </button>
         )}
-        {blocks.map((block) => {
+        {visibleBlocks.map((block) => {
           const isSelected = !searchedBlock && block.hash === selected.hash;
           return (
             <button
@@ -156,14 +159,7 @@ export function RecentBlocks({
               onClick={() => setSelectedHash(block.hash)}
               aria-pressed={isSelected}
             >
-              <i className={styles.blockThumb}>
-                <Image
-                  src="/figma/avatar.jpeg"
-                  alt=""
-                  width={38}
-                  height={38}
-                />
-              </i>
+              <BlockIcon selected={isSelected} />
               <span>
                 <b>#{block.number}</b>
                 <small>{formatTime(block.timestamp)}</small>
@@ -178,6 +174,9 @@ export function RecentBlocks({
             </button>
           );
         })}
+        <Link href="/blocos" className={styles.blockHistoryLink}>
+          Ver histórico completo
+        </Link>
       </aside>
 
       <article className={styles.details}>
@@ -199,13 +198,7 @@ export function RecentBlocks({
               />
             </strong>
           </div>
-          <Image
-            className={styles.avatar}
-            src="/figma/avatar.jpeg"
-            alt=""
-            width={42}
-            height={42}
-          />
+          <BlockIcon selected size="detail" />
         </header>
 
         <div className={styles.detailCards}>

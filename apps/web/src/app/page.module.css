@@ -20,7 +20,7 @@
 
 @media(max-width:640px){.filterSearch{flex:1 0 100%}.filterSearch input{width:100%}}
 
-.blocksPanel{margin-top:24px;min-height:475px}.blockRow{font:inherit;cursor:pointer}.blockThumb{overflow:hidden}.blockThumb img{display:block;width:100%;height:100%;object-fit:cover}.blockRow:nth-child(2) .blockThumb img{filter:hue-rotate(80deg)}.blockRow:nth-child(3) .blockThumb img{filter:hue-rotate(160deg)}.detailsHeader{gap:14px}.detailsHeader>em{margin-right:auto}.add{cursor:pointer}.add span{display:grid;place-items:center;width:46px;height:46px;border:1px solid #4b5563;border-radius:50%;color:#9ca3af;font-size:28px;font-weight:300}.share,.analyze{cursor:pointer}.detailsFooter .metric:nth-child(2) strong{font-size:22px}
+.blocksPanel{margin-top:24px;min-height:475px}.blockRow{font:inherit;cursor:pointer}.detailsHeader{gap:14px}.detailsHeader>em{margin-right:auto}.add{cursor:pointer}.add span{display:grid;place-items:center;width:46px;height:46px;border:1px solid #4b5563;border-radius:50%;color:#9ca3af;font-size:28px;font-weight:300}.share,.analyze{cursor:pointer}.detailsFooter .metric:nth-child(2) strong{font-size:22px}
 
 .filters{border-radius:16px;padding:8px 12px}
 
@@ -32,7 +32,6 @@
 
 .nav{background:#24252f;color:#d1d5db}.nav .active{background:#1946e5;color:#fff}.active i{background:#fff}.nav a:hover:not(.active){background:#30313b;color:#fff}.nav .active:hover{background:#123bbf}.legend i{background:#1946e5}.progressRow b:after{background:#1946e5}.samples div:first-child{background:#1946e5;color:#fff}.samples div:first-child:after{background:#123bbf}.sectionState button,.analyze{background:#1946e5;color:#fff}.sectionState button:hover,.analyze:hover{background:#123bbf}.nav a:focus-visible,.sectionState button:focus-visible,.blockRow:focus-visible,.add:focus-visible,.share:focus-visible,.analyze:focus-visible,.filterControls select:focus-visible,.filterControls input:focus-visible{outline-color:#5f82ff}
 
-.blockRow .blockThumb{background:#0d225f}.blockRow .blockThumb img,.blockRow:nth-child(2) .blockThumb img,.blockRow:nth-child(3) .blockThumb img{filter:hue-rotate(320deg)}
 
 .nav .active{background:#1946e5;color:#fff}.nav .active:hover{background:#123bbf}.summary,.historyPanel,.blocksPanel,.recentBlocksPanel{scroll-margin-top:80px}
 
@@ -225,3 +224,13 @@
 @media(prefers-reduced-motion:reduce){
   .historyRanges button{transition:none}
 }
+
+.blocksPanel{align-items:start}
+.details{align-self:start}
+.blockIcon{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--color-focus);border-radius:50%;background:var(--color-surface-raised);color:var(--color-primary-text)}
+.blockIcon svg{width:20px;height:20px;color:currentColor}
+.blockIconSelected{background:var(--color-primary-deep);color:var(--color-text)}
+.blockIconDetail{width:42px;height:42px;background:var(--color-surface-raised)}
+.blockHistoryLink{align-self:center;padding:8px 12px;color:var(--color-primary-text);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.blockHistoryLink:hover{color:var(--color-text)}
+.blockHistoryLink:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px;border-radius:8px}

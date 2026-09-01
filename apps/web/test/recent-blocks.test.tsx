@@ -10,6 +10,30 @@ const blockViewFixture = toBlockViewModel(blockFixture);
 afterEach(() => vi.unstubAllGlobals());
 
 describe("recent block actions", () => {
+  it("renders at most ten blocks with the official icon and history link", () => {
+    const blocks = Array.from({ length: 12 }, (_, index) => ({
+      ...blockViewFixture,
+      number: String(23_548_192 - index),
+      hash: `0x${String(index).padStart(64, "0")}`,
+    }));
+
+    render(
+      <RecentBlocks
+        blocks={blocks}
+        searchedBlock={null}
+        onBackToLive={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /#23548/i })).toHaveLength(10);
+    expect(screen.getAllByTestId("block-icon")).toHaveLength(11);
+    expect(screen.getByRole("link", { name: /histórico completo/i })).toHaveAttribute(
+      "href",
+      "/blocos",
+    );
+    expect(document.querySelector('img[src*="avatar"]')).toBeNull();
+  });
+
   it("opens the backend-provided Etherscan URL", async () => {
     const user = userEvent.setup();
     const open = vi.fn();
