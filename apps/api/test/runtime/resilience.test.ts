@@ -16,9 +16,14 @@ import type {
 } from '../../src/domain/blocks/models.js';
 import { FeeHistoryUnavailableError } from '../../src/domain/fees/fee-trend.js';
 import type { AppConfig } from '../../src/config/env.js';
-import { createRuntime, redactConnectionUrl, type RuntimeAdapters } from '../../src/runtime.js';
+import {
+  createRuntime,
+  redactConnectionUrl,
+  UnavailableBlockRepository,
+  type RuntimeAdapters,
+} from '../../src/runtime.js';
 import { FakeFeeSnapshotRepository, FakeObservedBlockRepository } from '../helpers/fakes.js';
-import { FIXED_NOW, normalizedBlock, pendingBid } from '../helpers/fixtures.js';
+import { blockSummary, FIXED_NOW, normalizedBlock, pendingBid } from '../helpers/fixtures.js';
 
 const config: AppConfig = {
   PORT: 3001,
@@ -35,6 +40,7 @@ const config: AppConfig = {
 function adapters(options: { mongoFailsOnce?: boolean; alchemyFailsAfterStart?: boolean } = {}) {
   const feeRepository = new FakeFeeSnapshotRepository();
   const blockRepository = new FakeObservedBlockRepository();
+  blockRepository.page = { data: [blockSummary(20_000_019n)], nextCursor: null };
   let mongoAvailable = !options.mongoFailsOnce;
   if (!mongoAvailable) {
     feeRepository.available = false;
@@ -125,6 +131,14 @@ afterEach(() => {
 });
 
 describe('runtime resilience', () => {
+  it('rejects block history when MongoDB is not configured', async () => {
+    const repository = new UnavailableBlockRepository();
+
+    await expect(repository.findPage({ limit: 10 })).rejects.toBeInstanceOf(
+      PersistenceUnavailableError,
+    );
+  });
+
   it('redacts credentials, paths and query strings from configured URLs', () => {
     expect(redactConnectionUrl(config.ALCHEMY_HTTP_URL)).toBe(
       'https://alchemy.example.test/[redacted]',
@@ -142,6 +156,7 @@ describe('runtime resilience', () => {
     await runtime.start();
     const current = await request(runtime.app).get('/api/v1/fees/current');
     const recent = await request(runtime.app).get('/api/v1/blocks/recent');
+    const history = await request(runtime.app).get('/api/v1/blocks/history');
 
     expect(current.status).toBe(200);
     expect(current.body.data).toMatchObject({
@@ -151,6 +166,9 @@ describe('runtime resilience', () => {
     });
     expect(recent.status).toBe(200);
     expect(recent.body.data).toHaveLength(20);
+    expect(history.status).toBe(200);
+    expect(history.body.data).toHaveLength(1);
+    expect(history.body.page).toEqual({ nextCursor: null, hasMore: false });
     expect(context.mongo.connect).toHaveBeenCalledTimes(1);
     expect(context.blockSource.start).toHaveBeenCalledTimes(1);
 

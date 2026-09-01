@@ -234,6 +234,33 @@ describe('REST envelopes and queries', () => {
     ).toBe(false);
   });
 
+  it('validates block-history queries and coherent pages', () => {
+    const querySchema = schema('BlockHistoryQuerySchema');
+    const responseSchema = schema('BlockHistoryResponseSchema');
+
+    expect(querySchema.parse({})).toEqual({ limit: 10 });
+    expect(querySchema.parse({ limit: '50', cursor: 'opaque' })).toEqual({
+      limit: 50,
+      cursor: 'opaque',
+    });
+    expect(querySchema.safeParse({ limit: 0 }).success).toBe(false);
+    expect(querySchema.safeParse({ limit: 51 }).success).toBe(false);
+    expect(querySchema.safeParse({ cursor: '' }).success).toBe(false);
+
+    expect(
+      responseSchema.safeParse({
+        data: [blockSummary],
+        page: { nextCursor: 'next', hasMore: true },
+      }).success,
+    ).toBe(true);
+    expect(
+      responseSchema.safeParse({
+        data: [],
+        page: { nextCursor: null, hasMore: true },
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts every stable API error code', () => {
     const apiErrorSchema = schema('ApiErrorSchema');
     const codes = [

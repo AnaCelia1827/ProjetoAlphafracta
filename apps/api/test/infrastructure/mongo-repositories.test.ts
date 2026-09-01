@@ -47,6 +47,10 @@ interface BlockRepository {
     exceptHash: `0x${string}`,
   ): Promise<void>;
   findRecent(limit: number): Promise<Array<ReturnType<typeof blockSummary>>>;
+  findPage(query: { limit: number; cursor?: string }): Promise<{
+    data: Array<ReturnType<typeof blockSummary>>;
+    nextCursor: string | null;
+  }>;
   findCanonicalBefore(timestamp: Date, from: Date): Promise<Array<ReturnType<typeof blockSummary>>>;
   updateFinality(
     changes: Array<{ number: bigint; hash: `0x${string}`; finality: 'safe' | 'finalized' }>,
@@ -292,6 +296,30 @@ describe('MongoObservedBlockRepository', () => {
       number: 11n,
       finality: 'safe',
     });
+  });
+
+  it('paginates canonical blocks with a stable opaque cursor', async () => {
+    await database!.collection('observed_blocks').deleteMany({});
+    for (const number of [101n, 102n, 103n, 104n, 105n]) {
+      const hash = `0x${number.toString(16).padStart(64, '0')}` as `0x${string}`;
+      await blockRepository!.saveCanonical(blockSummary(number, hash));
+    }
+
+    const first = await blockRepository!.findPage({ limit: 2 });
+    expect(first.data.map((block) => block.number)).toEqual([105n, 104n]);
+    expect(first.nextCursor).toEqual(expect.any(String));
+
+    await blockRepository!.saveCanonical(blockSummary(106n, `0x${'6a'.padStart(64, '0')}`));
+    const second = await blockRepository!.findPage({
+      limit: 2,
+      cursor: first.nextCursor!,
+    });
+    expect(second.data.map((block) => block.number)).toEqual([103n, 102n]);
+    expect(second.data.some((block) => block.number === 106n)).toBe(false);
+
+    await expect(
+      blockRepository!.findPage({ limit: 3, cursor: first.nextCursor! }),
+    ).rejects.toThrow(/cursor/i);
   });
 });
 

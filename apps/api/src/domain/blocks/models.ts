@@ -55,6 +55,18 @@ export interface BlockSummary {
   provider: 'alchemy';
 }
 
+/** Consulta de histórico de blocos já normalizada para a porta de persistência. */
+export interface BlockHistoryQuery {
+  limit: number;
+  cursor?: string;
+}
+
+/** Página de blocos canônicos com cursor opaco para continuação estável. */
+export interface BlockHistoryPage {
+  data: BlockSummary[];
+  nextCursor: string | null;
+}
+
 /** Cabeça identificada que representa um marco de finality retornado pela rede. */
 export interface FinalityHead {
   number: bigint;

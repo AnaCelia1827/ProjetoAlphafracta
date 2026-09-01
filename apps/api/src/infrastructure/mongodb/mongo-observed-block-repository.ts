@@ -1,6 +1,13 @@
-import { Long, type Collection } from 'mongodb';
+import { Long, ObjectId, type Collection, type Filter } from 'mongodb';
+import { z } from 'zod';
 
-import type { BlockSummary, FinalityChange } from '../../domain/blocks/models.js';
+import { InvalidQueryError } from '../../application/common/errors.js';
+import type {
+  BlockHistoryPage,
+  BlockHistoryQuery,
+  BlockSummary,
+  FinalityChange,
+} from '../../domain/blocks/models.js';
 import type { ObservedBlockRepository } from '../../domain/blocks/ports.js';
 import { rational, type Rational } from '../../domain/shared/units.js';
 import { MongoPersistenceUnavailableError, type MongoDatabaseProvider } from './mongo-client.js';
@@ -40,6 +47,29 @@ interface ObservedBlockDocument {
   transactionCount: number;
   provider: 'alchemy';
   canonical: boolean;
+}
+
+/** Valida a versão e os limites de um cursor de histórico de blocos. */
+const BlockCursorSchema = z.object({
+  v: z.literal(1),
+  limit: z.number().int().min(1).max(50),
+  anchorNumber: z.string().regex(/^(0|[1-9]\d*)$/),
+  afterNumber: z.string().regex(/^(0|[1-9]\d*)$/),
+  afterId: z.string().regex(/^[a-fA-F0-9]{24}$/),
+});
+
+/** Cursor validado que preserva a ordenação por altura e ObjectId. */
+type BlockCursor = z.infer<typeof BlockCursorSchema>;
+
+/** Rejeita cursores adulterados ou incompatíveis com a consulta original. */
+class InvalidBlockHistoryCursorError extends InvalidQueryError {
+  constructor() {
+    super(
+      [{ field: 'cursor', issue: 'The cursor is invalid or does not match the query' }],
+      'The block history cursor is invalid or does not match the query',
+    );
+    this.name = 'InvalidBlockHistoryCursorError';
+  }
 }
 
 /** Converte razão BigInt para texto antes de gravar no BSON. */
@@ -94,6 +124,20 @@ function deserializeBlock(document: ObservedBlockDocument): BlockSummary {
     transactionCount: document.transactionCount,
     provider: document.provider,
   };
+}
+
+/** Codifica cursor versionado em texto opaco para a fronteira HTTP. */
+function encodeBlockCursor(cursor: BlockCursor): string {
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
+}
+
+/** Decodifica e valida cursor sem revelar sua estrutura em falhas de entrada. */
+function decodeBlockCursor(encoded: string): BlockCursor {
+  try {
+    return BlockCursorSchema.parse(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
+  } catch {
+    throw new InvalidBlockHistoryCursorError();
+  }
 }
 
 /** Repositório Mongo que implementa a memória persistente de blocos observados. */
@@ -193,6 +237,57 @@ export class MongoObservedBlockRepository implements ObservedBlockRepository {
         .toArray();
       return documents.map(deserializeBlock);
     } catch (error) {
+      this.fail(error);
+    }
+  }
+
+  /** Pagina blocos canônicos sem que inserções novas alterem as páginas subsequentes. */
+  async findPage(query: BlockHistoryQuery): Promise<BlockHistoryPage> {
+    try {
+      const filter: Filter<ObservedBlockDocument> = {
+        network: 'ethereum-mainnet',
+        canonical: true,
+      };
+      let anchorNumber: bigint | null = null;
+
+      if (query.cursor !== undefined) {
+        const cursor = decodeBlockCursor(query.cursor);
+        if (cursor.limit !== query.limit) throw new InvalidBlockHistoryCursorError();
+        anchorNumber = BigInt(cursor.anchorNumber);
+        const afterNumber = Long.fromBigInt(BigInt(cursor.afterNumber));
+        filter.number = { $lte: Long.fromBigInt(anchorNumber) };
+        filter.$or = [
+          { number: { $lt: afterNumber } },
+          { number: afterNumber, _id: { $lt: new ObjectId(cursor.afterId) } },
+        ];
+      }
+
+      const documents = await this.collection()
+        .find(filter)
+        .sort({ number: -1, _id: -1 })
+        .limit(query.limit + 1)
+        .toArray();
+      const hasMore = documents.length > query.limit;
+      const pageDocuments = documents.slice(0, query.limit);
+      const first = pageDocuments[0];
+      const last = pageDocuments.at(-1);
+      const effectiveAnchor = anchorNumber ?? first?.number.toBigInt() ?? null;
+
+      return {
+        data: pageDocuments.map(deserializeBlock),
+        nextCursor:
+          hasMore && effectiveAnchor !== null && last?._id
+            ? encodeBlockCursor({
+                v: 1,
+                limit: query.limit,
+                anchorNumber: effectiveAnchor.toString(),
+                afterNumber: last.number.toBigInt().toString(),
+                afterId: last._id.toHexString(),
+              })
+            : null,
+      };
+    } catch (error) {
+      if (error instanceof InvalidBlockHistoryCursorError) throw error;
       this.fail(error);
     }
   }
