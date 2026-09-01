@@ -54,6 +54,29 @@ export const RecentBlocksResponseSchema = z.object({
   data: z.array(BlockSummarySchema).max(20),
 });
 
+export const BlockHistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  cursor: z.string().min(1).optional(),
+});
+
+export const BlockHistoryResponseSchema = z
+  .object({
+    data: z.array(BlockSummarySchema).max(50),
+    page: z.object({
+      nextCursor: z.string().min(1).nullable(),
+      hasMore: z.boolean(),
+    }),
+  })
+  .superRefine((response, context) => {
+    if (response.page.hasMore !== (response.page.nextCursor !== null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['page'],
+        message: 'hasMore must match nextCursor presence',
+      });
+    }
+  });
+
 /** Envelopa a consulta pontual de um bloco sem alterar a janela observada. */
 export const BlockResponseSchema = z.object({
   data: BlockSummarySchema,
@@ -67,3 +90,5 @@ export type BlockFinalityDto = z.infer<typeof BlockFinalitySchema>;
 export type BlockSummaryDto = z.infer<typeof BlockSummarySchema>;
 /** Tipo da atualização enxuta de status de um bloco. */
 export type BlockStatusChangedDto = z.infer<typeof BlockStatusChangedSchema>;
+export type BlockHistoryQueryDto = z.infer<typeof BlockHistoryQuerySchema>;
+export type BlockHistoryResponseDto = z.infer<typeof BlockHistoryResponseSchema>;
