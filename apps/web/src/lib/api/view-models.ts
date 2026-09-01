@@ -32,6 +32,9 @@ export const toHistoryPoint = (
   timestamp: snapshot.timestamp,
   recommendedMaxFeeGwei: snapshot.recommendedMaxFeeGwei,
   recommendedPriorityFeeGwei: snapshot.recommendedPriorityFeeGwei,
+  ...(snapshot.estimatedTransferCost.status === "unavailable"
+    ? {}
+    : { maxCostUsd: snapshot.estimatedTransferCost.maxCostUsd }),
 });
 
 export const toBlockViewModel = (

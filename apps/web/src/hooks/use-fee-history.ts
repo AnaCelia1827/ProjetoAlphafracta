@@ -4,26 +4,38 @@ import { useCallback, useEffect, useState } from "react";
 import { apiConfig } from "@/lib/api/config";
 import { fetchAllFeeHistory } from "@/lib/api/fetch-fee-history";
 import { mockFeeHistory } from "@/mocks/fee-snapshot";
-import type { FeeHistoryPoint } from "@/types/fees";
+import type { FeeHistoryPoint, HistoryRangeMinutes } from "@/types/fees";
 
-function filterMockHistory(hours: number) {
+type FeeHistoryResult = {
+  history: FeeHistoryPoint[];
+  baseline24h: FeeHistoryPoint[];
+  loading: boolean;
+  error: string | null;
+  refresh(): void;
+};
+
+type StoredResult = {
+  requestKey: string;
+  history: FeeHistoryPoint[];
+  baseline24h: FeeHistoryPoint[];
+  error: string | null;
+};
+
+function filterMockHistory(rangeMinutes: HistoryRangeMinutes) {
   const lastTimestamp = Date.parse(mockFeeHistory.at(-1)?.timestamp ?? "");
-  const cutoff = lastTimestamp - hours * 60 * 60 * 1_000;
+  const cutoff = lastTimestamp - rangeMinutes * 60_000;
   return mockFeeHistory.filter((item) => Date.parse(item.timestamp) >= cutoff);
 }
 
-export function useFeeHistory(hours = 6) {
+export function useFeeHistory(
+  rangeMinutes: HistoryRangeMinutes = 360,
+): FeeHistoryResult {
   const [requestVersion, setRequestVersion] = useState(0);
-  const requestKey = `${hours}:${requestVersion}`;
-  const [result, setResult] = useState<{
-    requestKey: string;
-    hours: number;
-    history: FeeHistoryPoint[];
-    error: string | null;
-  }>({
+  const requestKey = `${rangeMinutes}:${requestVersion}`;
+  const [result, setResult] = useState<StoredResult>({
     requestKey: apiConfig.useMockData ? requestKey : "",
-    hours,
-    history: apiConfig.useMockData ? mockFeeHistory : [],
+    history: apiConfig.useMockData ? filterMockHistory(rangeMinutes) : [],
+    baseline24h: apiConfig.useMockData ? mockFeeHistory : [],
     error: null,
   });
   const refresh = useCallback(() => {
@@ -35,37 +47,63 @@ export function useFeeHistory(hours = 6) {
     if (apiConfig.useMockData) return;
 
     const controller = new AbortController();
+    let active = true;
     const to = new Date();
-    const from = new Date(to.getTime() - hours * 60 * 60 * 1_000);
+    const baselineFrom = new Date(to.getTime() - 1440 * 60_000);
+    const selectedFrom = new Date(
+      to.getTime() - rangeMinutes * 60_000,
+    );
+    const baselinePromise = fetchAllFeeHistory(
+      baselineFrom,
+      to,
+      controller.signal,
+    );
+    const selectedPromise =
+      rangeMinutes === 1440
+        ? baselinePromise
+        : fetchAllFeeHistory(selectedFrom, to, controller.signal);
 
-    void fetchAllFeeHistory(from, to, controller.signal)
-      .then((items) => {
-        setResult({ requestKey, hours, history: items, error: null });
+    void Promise.all([baselinePromise, selectedPromise])
+      .then(([baseline24h, history]) => {
+        if (!active) return;
+        setResult({ requestKey, history, baseline24h, error: null });
       })
       .catch((reason: unknown) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setResult((current) => ({
+        if (!active) return;
+        if (reason instanceof DOMException && reason.name === "AbortError") {
+          return;
+        }
+        setResult({
           requestKey,
-          hours,
-          history: current.hours === hours ? current.history : [],
+          history: [],
+          baseline24h: [],
           error:
             reason instanceof Error
               ? reason.message
               : "Falha ao carregar o histórico.",
-        }));
+        });
       });
 
-    return () => controller.abort();
-  }, [hours, requestKey]);
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [rangeMinutes, requestKey]);
 
-  const pending = !apiConfig.useMockData && result.requestKey !== requestKey;
+  if (apiConfig.useMockData) {
+    return {
+      history: filterMockHistory(rangeMinutes),
+      baseline24h: mockFeeHistory,
+      loading: false,
+      error: null,
+      refresh,
+    };
+  }
 
+  const pending = result.requestKey !== requestKey;
   return {
-    history: apiConfig.useMockData
-      ? filterMockHistory(hours)
-      : result.hours === hours
-        ? result.history
-        : [],
+    history: pending ? [] : result.history,
+    baseline24h: pending ? [] : result.baseline24h,
     loading: pending,
     error: pending ? null : result.error,
     refresh,

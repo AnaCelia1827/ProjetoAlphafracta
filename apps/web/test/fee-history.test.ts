@@ -41,6 +41,10 @@ describe("fee history", () => {
               {
                 ...feeSnapshotFixture,
                 timestamp: "2026-08-31T03:01:00.000Z",
+                estimatedTransferCost: {
+                  ...feeSnapshotFixture.estimatedTransferCost,
+                  maxCostUsd: 4.62,
+                },
               },
             ],
             page: { nextCursor: null, hasMore: false },
@@ -54,6 +58,7 @@ describe("fee history", () => {
     const result = await fetchAllFeeHistory(from, to);
 
     expect(result).toHaveLength(2);
+    expect(result.map((point) => point.maxCostUsd)).toEqual([2.31, 4.62]);
     expect(requests).toHaveLength(2);
 
     const first = new URL(requests[0]!, "http://localhost");

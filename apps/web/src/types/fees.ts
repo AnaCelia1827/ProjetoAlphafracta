@@ -7,7 +7,7 @@ export type LiveConnection = "connecting" | "live" | "degraded" | "offline";
 
 export type DataStatus = "fresh" | "stale" | "unavailable";
 
-export type HistoryRangeHours = 1 | 6 | 24;
+export type HistoryRangeMinutes = 5 | 15 | 60 | 360 | 1440;
 
 export type FeeViewModel = {
   timestamp: string;
@@ -35,4 +35,5 @@ export type FeeHistoryPoint = {
   timestamp: string;
   recommendedMaxFeeGwei: number;
   recommendedPriorityFeeGwei: number;
+  maxCostUsd?: number;
 };

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { toBlockViewModel, toFeeViewModel } from "@/lib/api/view-models";
+import {
+  toBlockViewModel,
+  toFeeViewModel,
+  toHistoryPoint,
+} from "@/lib/api/view-models";
 import { blockFixture, feeSnapshotFixture } from "./fixtures";
 
 describe("API view models", () => {
@@ -11,6 +15,24 @@ describe("API view models", () => {
       level: "high",
       reasons: ["fresh-data"],
     });
+  });
+
+  it("keeps the USD value recorded by each historical snapshot", () => {
+    expect(toHistoryPoint(feeSnapshotFixture)).toMatchObject({
+      maxCostUsd: 2.31,
+      recommendedMaxFeeGwei: 50,
+    });
+    expect(
+      toHistoryPoint({
+        ...feeSnapshotFixture,
+        estimatedTransferCost: {
+          status: "unavailable",
+          transactionType: "native-eth-transfer",
+          gasUnits: 21000,
+          maxCostEth: 0.00105,
+        },
+      }),
+    ).not.toHaveProperty("maxCostUsd");
   });
 
   it("preserves decimal block identity and canonical actions", () => {

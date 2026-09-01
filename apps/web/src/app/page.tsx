@@ -12,16 +12,17 @@ import { useDataAge } from "@/hooks/use-data-age";
 import { useFeeHistory } from "@/hooks/use-fee-history";
 import { useLiveMonitor } from "@/hooks/use-live-monitor";
 import { apiConfig } from "@/lib/api/config";
-import type { HistoryRangeHours } from "@/types/fees";
+import type { HistoryRangeMinutes } from "@/types/fees";
 import styles from "./page.module.css";
 
 export default function Home() {
-  const [rangeHours, setRangeHours] = useState<HistoryRangeHours>(24);
+  const [rangeMinutes, setRangeMinutes] =
+    useState<HistoryRangeMinutes>(1440);
   const [blockSearchValue, setBlockSearchValue] = useState("");
   const live = useLiveMonitor();
   const blockSearch = useBlockSearch();
   const { ageMs, dataStatus } = useDataAge(live.fee);
-  const history = useFeeHistory(rangeHours);
+  const history = useFeeHistory(rangeMinutes);
 
   const searchBlock = (identifier: string) => {
     void blockSearch.search(identifier);
@@ -37,9 +38,9 @@ export default function Home() {
       <DashboardHeader status={live.connection} demo={apiConfig.useMockData} />
       <main className={styles.page} id="dashboard">
         <DashboardFilters
-          rangeHours={rangeHours}
+          rangeMinutes={rangeMinutes}
           search={blockSearchValue}
-          onRangeChange={setRangeHours}
+          onRangeChange={setRangeMinutes}
           onSearchChange={setBlockSearchValue}
           onSearch={searchBlock}
         />
