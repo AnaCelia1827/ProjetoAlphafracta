@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { FeeCard } from '@/components/fee-card';
@@ -29,11 +29,16 @@ const unavailableFeeViewFixture = {
 };
 
 describe('connected dashboard rendering', () => {
-  it('prioritizes native-transfer USD and keeps Gwei secondary', () => {
+  it('places snapshot freshness directly below the primary USD value', () => {
     render(<FeeCard snapshot={feeViewFixture} ageMs={4200} />);
 
-    expect(screen.getByText('Custo estimado para transferir ETH')).toBeVisible();
-    expect(screen.getByText(/US\$\s*2,31/)).toBeVisible();
+    const heroLabel = screen.getByText('Custo estimado para transferir ETH');
+    const hero = heroLabel.parentElement!;
+    const usdValue = within(hero).getByText(/US\$\s*2,31/);
+    const freshness = within(hero).getByText('Atualizado há 4s');
+
+    expect(freshness.previousElementSibling).toBe(usdValue);
+    expect(screen.queryByText('Idade do dado')).not.toBeInTheDocument();
     expect(screen.getByText(/50.*Gwei/i)).toBeVisible();
     expect(screen.queryByText(/confiança/i)).not.toBeInTheDocument();
   });
@@ -42,6 +47,8 @@ describe('connected dashboard rendering', () => {
     render(<FeeCard snapshot={unavailableFeeViewFixture} ageMs={20000} />);
 
     expect(screen.getByText(/cotação indisponível/i)).toBeVisible();
+    const hero = screen.getByText('Custo estimado para transferir ETH').parentElement!;
+    expect(within(hero).getByText('Atualizado há 20s')).toBeVisible();
   });
 
   it('renders actionable network context without source tags', () => {

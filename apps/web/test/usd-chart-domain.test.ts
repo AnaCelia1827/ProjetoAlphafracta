@@ -3,10 +3,7 @@ import { calculateUsdChartDomain } from '@/lib/fees/usd-chart-domain';
 
 describe('calculateUsdChartDomain', () => {
   it('uses ten percent headroom above the observed maximum', () => {
-    const domain = calculateUsdChartDomain([
-      { maxCostUsd: 1.2 },
-      { maxCostUsd: 2 },
-    ]);
+    const domain = calculateUsdChartDomain([{ maxCostUsd: 1.2 }, { maxCostUsd: 2 }]);
 
     expect(domain?.ceiling).toBeCloseTo(2.2);
     expect(domain?.midpoint).toBeCloseTo(1.1);
@@ -14,11 +11,7 @@ describe('calculateUsdChartDomain', () => {
   });
 
   it('keeps sub-dollar windows proportional and ignores unpriced snapshots', () => {
-    const domain = calculateUsdChartDomain([
-      { maxCostUsd: 0.1 },
-      {},
-      { maxCostUsd: 0.2 },
-    ]);
+    const domain = calculateUsdChartDomain([{ maxCostUsd: 0.1 }, {}, { maxCostUsd: 0.2 }]);
 
     expect(domain?.ceiling).toBeCloseTo(0.22);
     expect(domain?.midpoint).toBeCloseTo(0.11);

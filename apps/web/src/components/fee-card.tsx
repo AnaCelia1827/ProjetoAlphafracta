@@ -20,6 +20,11 @@ function formatGwei(value: number | undefined) {
     : `${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} Gwei`;
 }
 
+function formatDataAge(ageMs: number | null) {
+  if (ageMs === null) return 'Aguardando atualização';
+  return `Atualizado há ${Math.max(0, Math.round(ageMs / 1000))}s`;
+}
+
 export function FeeCard({
   snapshot,
   ageMs,
@@ -36,6 +41,7 @@ export function FeeCard({
             ? 'Cotação indisponível'
             : formatUsd(snapshot.maxCostUsd)}
         </strong>
+        <small className={styles.transferFreshness}>{formatDataAge(ageMs)}</small>
         <small>Estimativa para uma transferência simples de 21.000 gas</small>
       </div>
 
@@ -55,10 +61,6 @@ export function FeeCard({
         <p>
           <span>Status da cotação</span>
           <strong>{snapshot ? priceStatusLabels[snapshot.priceStatus] : 'Aguardando dados'}</strong>
-        </p>
-        <p>
-          <span>Idade do dado</span>
-          <strong>{ageMs === null ? '—' : `${Math.round(ageMs / 1000)} segundos`}</strong>
         </p>
       </div>
     </article>
