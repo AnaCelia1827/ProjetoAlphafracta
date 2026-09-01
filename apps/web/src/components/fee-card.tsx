@@ -1,12 +1,10 @@
 import styles from "@/app/page.module.css";
-import { Metric } from "@/components/metric";
 import type { FeeViewModel } from "@/types/fees";
 
-const confidenceLabels: Record<FeeViewModel["confidence"]["level"], string> = {
-  high: "Confiança alta",
-  medium: "Confiança média",
-  low: "Confiança baixa",
-  unavailable: "Confiança indisponível",
+const priceStatusLabels: Record<FeeViewModel["priceStatus"], string> = {
+  fresh: "Cotação atualizada",
+  stale: "Cotação desatualizada",
+  unavailable: "Sem cotação atual",
 };
 
 function formatUsd(value: number) {
@@ -16,19 +14,10 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
-function formatTrend(trend: FeeViewModel["trend"]) {
-  if (trend.status === "insufficient-history") {
-    return "Histórico insuficiente";
-  }
-  if (trend.status === "unavailable") {
-    return "Tendência indisponível";
-  }
-
-  const value = trend.percentChange.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${trend.percentChange >= 0 ? "+" : ""}${value}%`;
+function formatGwei(value: number | undefined) {
+  return value === undefined
+    ? "—"
+    : `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} Gwei`;
 }
 
 export function FeeCard({
@@ -38,54 +27,43 @@ export function FeeCard({
   snapshot: FeeViewModel | null;
   ageMs: number | null;
 }) {
-  const cost =
-    snapshot?.maxCostUsd === undefined
-      ? "Cotação indisponível"
-      : formatUsd(snapshot.maxCostUsd);
-
   return (
     <article className={`${styles.panel} ${styles.feeCard}`}>
-      <div className={styles.metrics}>
-        <Metric
-          label="Taxa máxima recomendada"
-          value={snapshot?.recommendedMaxFeeGwei}
-          suffix="Gwei"
-        />
-        <Metric
-          label="Taxa de prioridade"
-          value={snapshot?.recommendedPriorityFeeGwei}
-          suffix="Gwei"
-        />
-        <Metric label="Custo máximo estimado" value={cost} />
+      <div className={styles.transferHero}>
+        <span>Custo estimado para transferir ETH</span>
+        <strong>
+          {snapshot?.maxCostUsd === undefined
+            ? "Cotação indisponível"
+            : formatUsd(snapshot.maxCostUsd)}
+        </strong>
+        <small>Estimativa para uma transferência simples de 21.000 gas</small>
       </div>
 
-      <div className={styles.recommendationMeta}>
+      <div className={styles.feeSecondaryGrid}>
         <p>
-          <span>Confiança</span>
+          <span>Máxima recomendada</span>
+          <strong>{formatGwei(snapshot?.recommendedMaxFeeGwei)}</strong>
+        </p>
+        <p>
+          <span>Prioridade</span>
+          <strong>{formatGwei(snapshot?.recommendedPriorityFeeGwei)}</strong>
+        </p>
+        <p>
+          <span>Base fee</span>
+          <strong>{formatGwei(snapshot?.baseFeeGwei)}</strong>
+        </p>
+        <p>
+          <span>Status da cotação</span>
           <strong>
-            {snapshot
-              ? confidenceLabels[snapshot.confidence.level]
-              : "Aguardando dados"}
+            {snapshot ? priceStatusLabels[snapshot.priceStatus] : "Aguardando dados"}
           </strong>
         </p>
         <p>
-          <span>Tendência em 5 min</span>
-          <strong>{snapshot ? formatTrend(snapshot.trend) : "—"}</strong>
+          <span>Idade do dado</span>
+          <strong>
+            {ageMs === null ? "—" : `${Math.round(ageMs / 1000)} segundos`}
+          </strong>
         </p>
-      </div>
-
-      <div className={styles.feeBreakdown}>
-        <Metric label="BASE FEE" value={snapshot?.baseFeeGwei} suffix="Gwei" />
-        <Metric
-          label="PREÇO EFETIVO"
-          value={snapshot?.effectiveGasPriceGwei}
-          suffix="Gwei"
-        />
-        <Metric
-          label="IDADE DO DADO"
-          value={ageMs === null ? undefined : Math.round(ageMs / 1000)}
-          suffix="segundos"
-        />
       </div>
     </article>
   );

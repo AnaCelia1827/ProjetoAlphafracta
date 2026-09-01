@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { DataStatus } from "@/components/data-status";
 import { FeeCard } from "@/components/fee-card";
+import { NetworkMomentCard } from "@/components/network-moment-card";
 import { toFeeViewModel } from "@/lib/api/view-models";
 import { feeSnapshotFixture } from "./fixtures";
 
@@ -29,39 +29,44 @@ const unavailableFeeViewFixture = {
 };
 
 describe("connected dashboard rendering", () => {
-  it("renders confidence, transfer cost, and available trend", () => {
+  it("prioritizes native-transfer USD and keeps Gwei secondary", () => {
     render(<FeeCard snapshot={feeViewFixture} ageMs={4200} />);
 
-    expect(screen.getByText(/confiança alta/i)).toBeVisible();
-    expect(screen.getByText(/US\$\s2,31/)).toBeVisible();
-    expect(screen.getByText("+12,00%")).toBeVisible();
+    expect(screen.getByText("Custo estimado para transferir ETH")).toBeVisible();
+    expect(screen.getByText(/US\$\s*2,31/)).toBeVisible();
+    expect(screen.getByText(/50.*Gwei/i)).toBeVisible();
+    expect(screen.queryByText(/confiança/i)).not.toBeInTheDocument();
   });
 
-  it("does not invent USD or trend values when unavailable", () => {
+  it("does not invent a USD value when the quote is unavailable", () => {
     render(<FeeCard snapshot={unavailableFeeViewFixture} ageMs={20000} />);
 
     expect(screen.getByText(/cotação indisponível/i)).toBeVisible();
-    expect(screen.getByText(/histórico insuficiente/i)).toBeVisible();
   });
 
-  it("shows demo mode and the backend-derived data reason", () => {
+  it("renders actionable network context without source tags", () => {
     render(
-      <>
-        <DashboardHeader status="degraded" demo />
-        <DataStatus
-          snapshot={feeViewFixture}
-          dataStatus="stale"
-          error="Histórico temporariamente indisponível"
-        />
-      </>,
+      <NetworkMomentCard
+        moment={{
+          level: "cheap",
+          label: "Barato",
+          message: "Bom momento para transacionar",
+        }}
+        error={null}
+      />,
     );
+
+    expect(screen.getByText("Momento da rede")).toBeVisible();
+    expect(screen.getByText("Bom momento para transacionar")).toBeVisible();
+    expect(
+      screen.queryByText(/mempool|persistence|amostra robusta/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps demo and connection state visible in the header", () => {
+    render(<DashboardHeader status="degraded" demo />);
 
     expect(screen.getByText("Demo")).toBeVisible();
     expect(screen.getByText("Degradado")).toBeVisible();
-    expect(screen.getByText("Dados desatualizados")).toBeVisible();
-    expect(screen.getByText("Dados recentes")).toBeVisible();
-    expect(
-      screen.getByText("Histórico temporariamente indisponível"),
-    ).toBeVisible();
   });
 });

@@ -2,20 +2,15 @@
 
 import Image from "next/image";
 import styles from "@/app/page.module.css";
-import type { HistoryRangeMinutes } from "@/types/fees";
 
 type Props = {
-  rangeMinutes: HistoryRangeMinutes;
   search: string;
-  onRangeChange: (minutes: HistoryRangeMinutes) => void;
   onSearchChange: (search: string) => void;
   onSearch: (search: string) => void;
 };
 
 export function DashboardFilters({
-  rangeMinutes,
   search,
-  onRangeChange,
   onSearchChange,
   onSearch,
 }: Props) {
@@ -35,23 +30,6 @@ export function DashboardFilters({
         <div className={styles.networkBadge} aria-label="Rede monitorada">
           Ethereum Mainnet
         </div>
-        <label className={styles.filterSelect}>
-          <span className={styles.srOnly}>Período do histórico</span>
-          <select
-            aria-label="Período do histórico"
-            value={rangeMinutes}
-            onChange={(event) =>
-              onRangeChange(Number(event.target.value) as HistoryRangeMinutes)
-            }
-          >
-            <option value={5}>Últimos 5 minutos</option>
-            <option value={15}>Últimos 15 minutos</option>
-            <option value={60}>Última hora</option>
-            <option value={360}>Últimas 6 horas</option>
-            <option value={1440}>Últimas 24 horas</option>
-          </select>
-          <Image src="/figma/chevron.svg" alt="" width={12} height={8} />
-        </label>
         <form
           className={styles.filterSearch}
           role="search"

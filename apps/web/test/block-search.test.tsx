@@ -17,9 +17,7 @@ describe("block search", () => {
       const [search, setSearch] = useState("");
       return (
         <DashboardFilters
-          rangeMinutes={1440}
           search={search}
-          onRangeChange={vi.fn()}
           onSearchChange={setSearch}
           onSearch={onSearch}
         />
