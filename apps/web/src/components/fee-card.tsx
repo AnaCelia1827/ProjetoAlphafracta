@@ -1,23 +1,23 @@
-import styles from "@/app/page.module.css";
-import type { FeeViewModel } from "@/types/fees";
+import styles from '@/app/page.module.css';
+import type { FeeViewModel } from '@/types/fees';
 
-const priceStatusLabels: Record<FeeViewModel["priceStatus"], string> = {
-  fresh: "Cotação atualizada",
-  stale: "Cotação desatualizada",
-  unavailable: "Sem cotação atual",
+const priceStatusLabels: Record<FeeViewModel['priceStatus'], string> = {
+  fresh: 'Cotação atualizada',
+  stale: 'Cotação desatualizada',
+  unavailable: 'Sem cotação atual',
 };
 
 function formatUsd(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'USD',
   }).format(value);
 }
 
 function formatGwei(value: number | undefined) {
   return value === undefined
-    ? "—"
-    : `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} Gwei`;
+    ? '—'
+    : `${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} Gwei`;
 }
 
 export function FeeCard({
@@ -33,7 +33,7 @@ export function FeeCard({
         <span>Custo estimado para transferir ETH</span>
         <strong>
           {snapshot?.maxCostUsd === undefined
-            ? "Cotação indisponível"
+            ? 'Cotação indisponível'
             : formatUsd(snapshot.maxCostUsd)}
         </strong>
         <small>Estimativa para uma transferência simples de 21.000 gas</small>
@@ -54,15 +54,11 @@ export function FeeCard({
         </p>
         <p>
           <span>Status da cotação</span>
-          <strong>
-            {snapshot ? priceStatusLabels[snapshot.priceStatus] : "Aguardando dados"}
-          </strong>
+          <strong>{snapshot ? priceStatusLabels[snapshot.priceStatus] : 'Aguardando dados'}</strong>
         </p>
         <p>
           <span>Idade do dado</span>
-          <strong>
-            {ageMs === null ? "—" : `${Math.round(ageMs / 1000)} segundos`}
-          </strong>
+          <strong>{ageMs === null ? '—' : `${Math.round(ageMs / 1000)} segundos`}</strong>
         </p>
       </div>
     </article>

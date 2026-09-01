@@ -1,5 +1,5 @@
-import styles from "@/app/page.module.css";
-import type { NetworkMoment } from "@/lib/fees/network-moment";
+import styles from '@/app/page.module.css';
+import type { NetworkMoment } from '@/lib/fees/network-moment';
 
 export function NetworkMomentCard({
   moment,

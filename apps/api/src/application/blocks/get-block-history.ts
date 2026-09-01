@@ -1,11 +1,5 @@
-import {
-  BlocksUnavailableError,
-  PersistenceUnavailableError,
-} from '../common/errors.js';
-import type {
-  BlockHistoryPage,
-  BlockHistoryQuery,
-} from '../../domain/blocks/models.js';
+import { BlocksUnavailableError, PersistenceUnavailableError } from '../common/errors.js';
+import type { BlockHistoryPage, BlockHistoryQuery } from '../../domain/blocks/models.js';
 import type { ObservedBlockRepository } from '../../domain/blocks/ports.js';
 
 /** Caso de uso que entrega uma página estável do histórico canônico de blocos. */

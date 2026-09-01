@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import styles from "@/app/page.module.css";
+import Image from 'next/image';
+import styles from '@/app/page.module.css';
 
 type Props = {
   search: string;
@@ -9,18 +9,12 @@ type Props = {
   onSearch: (search: string) => void;
 };
 
-export function DashboardFilters({
-  search,
-  onSearchChange,
-  onSearch,
-}: Props) {
+export function DashboardFilters({ search, onSearchChange, onSearch }: Props) {
   const submitSearch = () => {
     const value = search.trim();
     if (value) {
       onSearch(value);
-      document
-        .getElementById("recent-blocks")
-        ?.scrollIntoView({ block: "start" });
+      document.getElementById('recent-blocks')?.scrollIntoView({ block: 'start' });
     }
   };
 

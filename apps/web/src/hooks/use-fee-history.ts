@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { apiConfig } from "@/lib/api/config";
-import { fetchAllFeeHistory } from "@/lib/api/fetch-fee-history";
-import { mockFeeHistory } from "@/mocks/fee-snapshot";
-import type { FeeHistoryPoint, HistoryRangeMinutes } from "@/types/fees";
+import { useCallback, useEffect, useState } from 'react';
+import { apiConfig } from '@/lib/api/config';
+import { fetchAllFeeHistory } from '@/lib/api/fetch-fee-history';
+import { mockFeeHistory } from '@/mocks/fee-snapshot';
+import type { FeeHistoryPoint, HistoryRangeMinutes } from '@/types/fees';
 
 type FeeHistoryResult = {
   history: FeeHistoryPoint[];
@@ -22,18 +22,16 @@ type StoredResult = {
 };
 
 function filterMockHistory(rangeMinutes: HistoryRangeMinutes) {
-  const lastTimestamp = Date.parse(mockFeeHistory.at(-1)?.timestamp ?? "");
+  const lastTimestamp = Date.parse(mockFeeHistory.at(-1)?.timestamp ?? '');
   const cutoff = lastTimestamp - rangeMinutes * 60_000;
   return mockFeeHistory.filter((item) => Date.parse(item.timestamp) >= cutoff);
 }
 
-export function useFeeHistory(
-  rangeMinutes: HistoryRangeMinutes = 360,
-): FeeHistoryResult {
+export function useFeeHistory(rangeMinutes: HistoryRangeMinutes = 360): FeeHistoryResult {
   const [requestVersion, setRequestVersion] = useState(0);
   const requestKey = `${rangeMinutes}:${requestVersion}`;
   const [result, setResult] = useState<StoredResult>({
-    requestKey: apiConfig.useMockData ? requestKey : "",
+    requestKey: apiConfig.useMockData ? requestKey : '',
     history: apiConfig.useMockData ? filterMockHistory(rangeMinutes) : [],
     baseline24h: apiConfig.useMockData ? mockFeeHistory : [],
     error: null,
@@ -50,14 +48,8 @@ export function useFeeHistory(
     let active = true;
     const to = new Date();
     const baselineFrom = new Date(to.getTime() - 1440 * 60_000);
-    const selectedFrom = new Date(
-      to.getTime() - rangeMinutes * 60_000,
-    );
-    const baselinePromise = fetchAllFeeHistory(
-      baselineFrom,
-      to,
-      controller.signal,
-    );
+    const selectedFrom = new Date(to.getTime() - rangeMinutes * 60_000);
+    const baselinePromise = fetchAllFeeHistory(baselineFrom, to, controller.signal);
     const selectedPromise =
       rangeMinutes === 1440
         ? baselinePromise
@@ -70,17 +62,14 @@ export function useFeeHistory(
       })
       .catch((reason: unknown) => {
         if (!active) return;
-        if (reason instanceof DOMException && reason.name === "AbortError") {
+        if (reason instanceof DOMException && reason.name === 'AbortError') {
           return;
         }
         setResult({
           requestKey,
           history: [],
           baseline24h: [],
-          error:
-            reason instanceof Error
-              ? reason.message
-              : "Falha ao carregar o histórico.",
+          error: reason instanceof Error ? reason.message : 'Falha ao carregar o histórico.',
         });
       });
 

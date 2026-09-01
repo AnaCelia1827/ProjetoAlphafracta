@@ -134,9 +134,7 @@ function encodeBlockCursor(cursor: BlockCursor): string {
 /** Decodifica e valida cursor sem revelar sua estrutura em falhas de entrada. */
 function decodeBlockCursor(encoded: string): BlockCursor {
   try {
-    return BlockCursorSchema.parse(
-      JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')),
-    );
+    return BlockCursorSchema.parse(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
   } catch {
     throw new InvalidBlockHistoryCursorError();
   }

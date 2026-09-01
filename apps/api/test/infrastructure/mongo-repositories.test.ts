@@ -309,9 +309,7 @@ describe('MongoObservedBlockRepository', () => {
     expect(first.data.map((block) => block.number)).toEqual([105n, 104n]);
     expect(first.nextCursor).toEqual(expect.any(String));
 
-    await blockRepository!.saveCanonical(
-      blockSummary(106n, `0x${'6a'.padStart(64, '0')}`),
-    );
+    await blockRepository!.saveCanonical(blockSummary(106n, `0x${'6a'.padStart(64, '0')}`));
     const second = await blockRepository!.findPage({
       limit: 2,
       cursor: first.nextCursor!,

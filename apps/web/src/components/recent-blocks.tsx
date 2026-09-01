@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
-import styles from "@/app/page.module.css";
-import { BlockIcon } from "@/components/block-icon";
-import { Metric } from "@/components/metric";
-import type { BlockViewModel } from "@/types/blocks";
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
+import styles from '@/app/page.module.css';
+import { BlockIcon } from '@/components/block-icon';
+import { Metric } from '@/components/metric';
+import type { BlockViewModel } from '@/types/blocks';
 
 type Props = {
   blocks: BlockViewModel[];
@@ -18,25 +18,25 @@ type Props = {
   onRefresh?: () => void;
 };
 
-const feeLevelLabels: Record<BlockViewModel["feeLevel"], string> = {
-  low: "Baixo",
-  normal: "Normal",
-  elevated: "Elevado",
-  high: "Alto",
-  unavailable: "Indisponível",
+const feeLevelLabels: Record<BlockViewModel['feeLevel'], string> = {
+  low: 'Baixo',
+  normal: 'Normal',
+  elevated: 'Elevado',
+  high: 'Alto',
+  unavailable: 'Indisponível',
 };
 
-const finalityLabels: Record<BlockViewModel["finality"], string> = {
-  latest: "Recente",
-  safe: "Seguro",
-  finalized: "Finalizado",
+const finalityLabels: Record<BlockViewModel['finality'], string> = {
+  latest: 'Recente',
+  safe: 'Seguro',
+  finalized: 'Finalizado',
 };
 
 function formatTime(timestamp: string) {
-  return new Date(timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  return new Date(timestamp).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   });
 }
 
@@ -58,12 +58,9 @@ export function RecentBlocks({
 
   if ((loading || searching) && blocks.length === 0 && !searchedBlock) {
     return (
-      <section
-        id="recent-blocks"
-        className={`${styles.panel} ${styles.recentBlocksPanel}`}
-      >
+      <section id="recent-blocks" className={`${styles.panel} ${styles.recentBlocksPanel}`}>
         <p className={styles.sectionState} role="status">
-          {searching ? "Buscando bloco…" : "Carregando blocos…"}
+          {searching ? 'Buscando bloco…' : 'Carregando blocos…'}
         </p>
       </section>
     );
@@ -71,12 +68,9 @@ export function RecentBlocks({
 
   if (blocks.length === 0 && !searchedBlock) {
     return (
-      <section
-        id="recent-blocks"
-        className={`${styles.panel} ${styles.recentBlocksPanel}`}
-      >
+      <section id="recent-blocks" className={`${styles.panel} ${styles.recentBlocksPanel}`}>
         <div className={styles.sectionState}>
-          <p>{error ?? "Nenhum bloco encontrado."}</p>
+          <p>{error ?? 'Nenhum bloco encontrado.'}</p>
           {error && onRefresh && (
             <button type="button" onClick={onRefresh}>
               Tentar novamente
@@ -88,9 +82,7 @@ export function RecentBlocks({
   }
 
   const selected =
-    searchedBlock ??
-    blocks.find((block) => block.hash === selectedHash) ??
-    blocks[0]!;
+    searchedBlock ?? blocks.find((block) => block.hash === selectedHash) ?? blocks[0]!;
 
   const shareBlock = async () => {
     setShareNotice(null);
@@ -102,21 +94,21 @@ export function RecentBlocks({
 
     try {
       if (!navigator.share) {
-        throw new Error("Web Share indisponível");
+        throw new Error('Web Share indisponível');
       }
       await navigator.share(data);
-      setShareNotice({ hash: selected.hash, message: "Compartilhado" });
+      setShareNotice({ hash: selected.hash, message: 'Compartilhado' });
     } catch (reason) {
-      if (reason instanceof DOMException && reason.name === "AbortError") {
+      if (reason instanceof DOMException && reason.name === 'AbortError') {
         return;
       }
       try {
         await navigator.clipboard.writeText(selected.etherscanUrl);
-        setShareNotice({ hash: selected.hash, message: "Link copiado" });
+        setShareNotice({ hash: selected.hash, message: 'Link copiado' });
       } catch {
         setShareNotice({
           hash: selected.hash,
-          message: "Não foi possível compartilhar",
+          message: 'Não foi possível compartilhar',
         });
       }
     }
@@ -141,11 +133,7 @@ export function RecentBlocks({
           </p>
         )}
         {searchedBlock && (
-          <button
-            className={styles.backToLive}
-            type="button"
-            onClick={onBackToLive}
-          >
+          <button className={styles.backToLive} type="button" onClick={onBackToLive}>
             Voltar ao vivo
           </button>
         )}
@@ -153,7 +141,7 @@ export function RecentBlocks({
           const isSelected = !searchedBlock && block.hash === selected.hash;
           return (
             <button
-              className={`${styles.blockRow} ${isSelected ? styles.selected : ""}`}
+              className={`${styles.blockRow} ${isSelected ? styles.selected : ''}`}
               key={block.hash}
               type="button"
               onClick={() => setSelectedHash(block.hash)}
@@ -166,9 +154,9 @@ export function RecentBlocks({
               </span>
               <em>{feeLevelLabels[block.feeLevel]}</em>
               <strong>
-                {block.baseFeeGwei.toLocaleString("pt-BR", {
+                {block.baseFeeGwei.toLocaleString('pt-BR', {
                   minimumFractionDigits: 2,
-                })}{" "}
+                })}{' '}
                 Gwei
               </strong>
             </button>
@@ -182,7 +170,7 @@ export function RecentBlocks({
       <article className={styles.details}>
         <header className={styles.detailsHeader}>
           <div>
-            <span>{searchedBlock ? "Resultado da busca" : "Detalhes do bloco"}</span>
+            <span>{searchedBlock ? 'Resultado da busca' : 'Detalhes do bloco'}</span>
             <p>#{selected.number}</p>
           </div>
           <em>{feeLevelLabels[selected.feeLevel]}</em>
@@ -190,12 +178,7 @@ export function RecentBlocks({
             <span>Provedor</span>
             <strong>
               Alchemy
-              <Image
-                src="/figma/provider.svg"
-                alt=""
-                width={18}
-                height={19}
-              />
+              <Image src="/figma/provider.svg" alt="" width={18} height={19} />
             </strong>
           </div>
           <BlockIcon selected size="detail" />
@@ -204,22 +187,18 @@ export function RecentBlocks({
         <div className={styles.detailCards}>
           <div className={styles.detailMetric}>
             <span>Base Fee</span>
-            <strong>{selected.baseFeeGwei.toLocaleString("pt-BR")} Gwei</strong>
+            <strong>{selected.baseFeeGwei.toLocaleString('pt-BR')} Gwei</strong>
             <small>{selected.transactionCount} transações</small>
           </div>
           <div className={styles.detailMetric}>
             <span>Priority Fee</span>
-            <strong>{selected.priorityFeeGwei.toLocaleString("pt-BR")} Gwei</strong>
-            <small>{selected.utilizationPercent.toLocaleString("pt-BR")}% utilizado</small>
+            <strong>{selected.priorityFeeGwei.toLocaleString('pt-BR')} Gwei</strong>
+            <small>{selected.utilizationPercent.toLocaleString('pt-BR')}% utilizado</small>
           </div>
         </div>
 
         <footer className={styles.detailsFooter}>
-          <Metric
-            label="PREÇO EFETIVO"
-            value={selected.effectiveGasPriceGwei}
-            suffix="Gwei"
-          />
+          <Metric label="PREÇO EFETIVO" value={selected.effectiveGasPriceGwei} suffix="Gwei" />
           <Metric label="FINALIDADE" value={finalityLabels[selected.finality]} />
           <div>
             <button
@@ -228,23 +207,12 @@ export function RecentBlocks({
               aria-label="Compartilhar bloco"
               onClick={() => void shareBlock()}
             >
-              <Image
-                src="/figma/block-b.svg"
-                alt=""
-                width={18}
-                height={20}
-              />
+              <Image src="/figma/block-b.svg" alt="" width={18} height={20} />
             </button>
             <button
               className={styles.analyze}
               type="button"
-              onClick={() =>
-                window.open(
-                  selected.etherscanUrl,
-                  "_blank",
-                  "noopener,noreferrer",
-                )
-              }
+              onClick={() => window.open(selected.etherscanUrl, '_blank', 'noopener,noreferrer')}
             >
               Analisar bloco
             </button>

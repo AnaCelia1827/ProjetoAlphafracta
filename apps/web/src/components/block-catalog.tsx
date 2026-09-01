@@ -1,32 +1,32 @@
-"use client";
+'use client';
 
-import { FormEvent, useState } from "react";
-import styles from "@/app/page.module.css";
-import { BlockIcon } from "@/components/block-icon";
-import { DashboardHeader } from "@/components/dashboard-header";
-import { useBlockCatalog } from "@/hooks/use-block-catalog";
-import { useBlockSearch } from "@/hooks/use-block-search";
-import { apiConfig } from "@/lib/api/config";
-import type { BlockViewModel } from "@/types/blocks";
+import { FormEvent, useState } from 'react';
+import styles from '@/app/page.module.css';
+import { BlockIcon } from '@/components/block-icon';
+import { DashboardHeader } from '@/components/dashboard-header';
+import { useBlockCatalog } from '@/hooks/use-block-catalog';
+import { useBlockSearch } from '@/hooks/use-block-search';
+import { apiConfig } from '@/lib/api/config';
+import type { BlockViewModel } from '@/types/blocks';
 
-const feeLevelLabels: Record<BlockViewModel["feeLevel"], string> = {
-  low: "Baixo",
-  normal: "Normal",
-  elevated: "Elevado",
-  high: "Alto",
-  unavailable: "Indisponível",
+const feeLevelLabels: Record<BlockViewModel['feeLevel'], string> = {
+  low: 'Baixo',
+  normal: 'Normal',
+  elevated: 'Elevado',
+  high: 'Alto',
+  unavailable: 'Indisponível',
 };
 
-const finalityLabels: Record<BlockViewModel["finality"], string> = {
-  latest: "Recente",
-  safe: "Seguro",
-  finalized: "Finalizado",
+const finalityLabels: Record<BlockViewModel['finality'], string> = {
+  latest: 'Recente',
+  safe: 'Seguro',
+  finalized: 'Finalizado',
 };
 
 function formatTime(timestamp: string) {
-  return new Date(timestamp).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "medium",
+  return new Date(timestamp).toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
   });
 }
 
@@ -66,13 +66,11 @@ export function BlockCatalogView({
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
   const visibleBlocks = blocks.slice(0, 10);
   const selected =
-    searchedBlock ??
-    visibleBlocks.find((block) => block.hash === selectedHash) ??
-    visibleBlocks[0];
+    searchedBlock ?? visibleBlocks.find((block) => block.hash === selectedHash) ?? visibleBlocks[0];
 
   return (
     <section
-      className={`${styles.catalogGrid} ${selected ? "" : styles.catalogGridSingle}`}
+      className={`${styles.catalogGrid} ${selected ? '' : styles.catalogGridSingle}`}
       aria-busy={loading || searching}
     >
       <aside className={styles.catalogList} aria-label="Catálogo de blocos">
@@ -102,11 +100,7 @@ export function BlockCatalogView({
           </p>
         )}
         {searchedBlock && onBackToCatalog && (
-          <button
-            className={styles.backToLive}
-            type="button"
-            onClick={onBackToCatalog}
-          >
+          <button className={styles.backToLive} type="button" onClick={onBackToCatalog}>
             Voltar ao catálogo
           </button>
         )}
@@ -114,17 +108,16 @@ export function BlockCatalogView({
         <div className={styles.catalogRows}>
           {visibleBlocks.length === 0 && !searchedBlock && (
             <div className={styles.catalogEmpty}>
-              <p role={loading ? "status" : undefined}>
-                {loading ? "Carregando catálogo…" : "Nenhum bloco encontrado."}
+              <p role={loading ? 'status' : undefined}>
+                {loading ? 'Carregando catálogo…' : 'Nenhum bloco encontrado.'}
               </p>
             </div>
           )}
           {visibleBlocks.map((block) => {
-            const isSelected =
-              !searchedBlock && block.hash === selected?.hash;
+            const isSelected = !searchedBlock && block.hash === selected?.hash;
             return (
               <button
-                className={`${styles.blockRow} ${isSelected ? styles.selected : ""}`}
+                className={`${styles.blockRow} ${isSelected ? styles.selected : ''}`}
                 key={block.hash}
                 type="button"
                 onClick={() => setSelectedHash(block.hash)}
@@ -137,9 +130,9 @@ export function BlockCatalogView({
                 </span>
                 <em>{feeLevelLabels[block.feeLevel]}</em>
                 <strong>
-                  {block.baseFeeGwei.toLocaleString("pt-BR", {
+                  {block.baseFeeGwei.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
-                  })}{" "}
+                  })}{' '}
                   Gwei
                 </strong>
               </button>
@@ -148,18 +141,10 @@ export function BlockCatalogView({
         </div>
 
         <nav className={styles.catalogPagination} aria-label="Paginação">
-          <button
-            type="button"
-            disabled={!canPrevious || loading}
-            onClick={onPrevious}
-          >
+          <button type="button" disabled={!canPrevious || loading} onClick={onPrevious}>
             Anterior
           </button>
-          <button
-            type="button"
-            disabled={!canNext || loading}
-            onClick={() => void onNext()}
-          >
+          <button type="button" disabled={!canNext || loading} onClick={() => void onNext()}>
             Próxima
           </button>
         </nav>
@@ -169,9 +154,7 @@ export function BlockCatalogView({
         <article className={styles.catalogDetails}>
           <header className={styles.catalogDetailsHeader}>
             <div>
-              <span>
-                {searchedBlock ? "Resultado da busca" : "Detalhes do bloco"}
-              </span>
+              <span>{searchedBlock ? 'Resultado da busca' : 'Detalhes do bloco'}</span>
               <h2>#{selected.number}</h2>
             </div>
             <BlockIcon selected size="detail" />
@@ -179,25 +162,23 @@ export function BlockCatalogView({
           <dl className={styles.catalogMetrics}>
             <div>
               <dt>Taxa-base</dt>
-              <dd>{selected.baseFeeGwei.toLocaleString("pt-BR")} Gwei</dd>
+              <dd>{selected.baseFeeGwei.toLocaleString('pt-BR')} Gwei</dd>
             </div>
             <div>
               <dt>Taxa de prioridade</dt>
-              <dd>{selected.priorityFeeGwei.toLocaleString("pt-BR")} Gwei</dd>
+              <dd>{selected.priorityFeeGwei.toLocaleString('pt-BR')} Gwei</dd>
             </div>
             <div>
               <dt>Preço efetivo</dt>
-              <dd>
-                {selected.effectiveGasPriceGwei.toLocaleString("pt-BR")} Gwei
-              </dd>
+              <dd>{selected.effectiveGasPriceGwei.toLocaleString('pt-BR')} Gwei</dd>
             </div>
             <div>
               <dt>Utilização</dt>
-              <dd>{selected.utilizationPercent.toLocaleString("pt-BR")}%</dd>
+              <dd>{selected.utilizationPercent.toLocaleString('pt-BR')}%</dd>
             </div>
             <div>
               <dt>Transações</dt>
-              <dd>{selected.transactionCount.toLocaleString("pt-BR")}</dd>
+              <dd>{selected.transactionCount.toLocaleString('pt-BR')}</dd>
             </div>
             <div>
               <dt>Finalidade</dt>
@@ -221,7 +202,7 @@ export function BlockCatalogView({
 export function BlockCatalog() {
   const catalog = useBlockCatalog();
   const blockSearch = useBlockSearch();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -229,7 +210,7 @@ export function BlockCatalog() {
   };
 
   const backToCatalog = () => {
-    setSearch("");
+    setSearch('');
     blockSearch.backToLive();
   };
 

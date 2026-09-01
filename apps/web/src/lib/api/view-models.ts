@@ -1,9 +1,6 @@
-import type {
-  BlockSummaryDto,
-  FeeSnapshotDto,
-} from "@alphractal/contracts";
-import type { BlockViewModel } from "@/types/blocks";
-import type { FeeHistoryPoint, FeeViewModel } from "@/types/fees";
+import type { BlockSummaryDto, FeeSnapshotDto } from '@alphractal/contracts';
+import type { BlockViewModel } from '@/types/blocks';
+import type { FeeHistoryPoint, FeeViewModel } from '@/types/fees';
 
 export function toFeeViewModel(snapshot: FeeSnapshotDto): FeeViewModel {
   const cost = snapshot.estimatedTransferCost;
@@ -16,7 +13,7 @@ export function toFeeViewModel(snapshot: FeeSnapshotDto): FeeViewModel {
     baseFeeGwei: snapshot.baseFeeGwei,
     effectiveGasPriceGwei: snapshot.effectiveGasPriceGwei,
     maxCostEth: cost.maxCostEth,
-    ...(cost.status === "unavailable" ? {} : { maxCostUsd: cost.maxCostUsd }),
+    ...(cost.status === 'unavailable' ? {} : { maxCostUsd: cost.maxCostUsd }),
     priceStatus: cost.status,
     trend: snapshot.trend24h,
     confidence: snapshot.confidence,
@@ -26,20 +23,16 @@ export function toFeeViewModel(snapshot: FeeSnapshotDto): FeeViewModel {
   };
 }
 
-export const toHistoryPoint = (
-  snapshot: FeeSnapshotDto,
-): FeeHistoryPoint => ({
+export const toHistoryPoint = (snapshot: FeeSnapshotDto): FeeHistoryPoint => ({
   timestamp: snapshot.timestamp,
   recommendedMaxFeeGwei: snapshot.recommendedMaxFeeGwei,
   recommendedPriorityFeeGwei: snapshot.recommendedPriorityFeeGwei,
-  ...(snapshot.estimatedTransferCost.status === "unavailable"
+  ...(snapshot.estimatedTransferCost.status === 'unavailable'
     ? {}
     : { maxCostUsd: snapshot.estimatedTransferCost.maxCostUsd }),
 });
 
-export const toBlockViewModel = (
-  block: BlockSummaryDto,
-): BlockViewModel => ({
+export const toBlockViewModel = (block: BlockSummaryDto): BlockViewModel => ({
   number: block.number,
   hash: block.hash,
   timestamp: block.timestamp,

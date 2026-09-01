@@ -82,7 +82,8 @@ export class FakeObservedBlockRepository implements ObservedBlockRepository {
   }
 
   /** Retorna página preparada ou reproduz indisponibilidade de persistência. */
-  async findPage(_query: BlockHistoryQuery): Promise<BlockHistoryPage> {
+  async findPage(query: BlockHistoryQuery): Promise<BlockHistoryPage> {
+    void query;
     if (this.error !== null) throw this.error;
     return this.page;
   }

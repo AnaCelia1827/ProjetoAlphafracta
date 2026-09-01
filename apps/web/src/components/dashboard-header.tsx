@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
-import styles from "@/app/page.module.css";
-import type { LiveConnection } from "@/types/fees";
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
+import styles from '@/app/page.module.css';
+import type { LiveConnection } from '@/types/fees';
 
 export const connectionLabels: Record<LiveConnection, string> = {
-  connecting: "Conectando",
-  live: "Live",
-  degraded: "Degradado",
-  offline: "Offline",
+  connecting: 'Conectando',
+  live: 'Live',
+  degraded: 'Degradado',
+  offline: 'Offline',
 };
 
 const connectionClasses: Record<LiveConnection, string> = {
@@ -20,75 +20,148 @@ const connectionClasses: Record<LiveConnection, string> = {
   offline: styles.disconnected,
 };
 
-type NavIconName = "dashboard" | "history" | "blocks";
+type NavIconName = 'dashboard' | 'history' | 'blocks';
 
 function NavIcon({ name }: { name: NavIconName }) {
-  if (name === "dashboard") {
-    return <svg className={styles.navIcon} viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" fill="currentColor" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" fill="currentColor" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" fill="currentColor" />
-    </svg>;
+  if (name === 'dashboard') {
+    return (
+      <svg className={styles.navIcon} viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" fill="currentColor" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" fill="currentColor" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" fill="currentColor" />
+      </svg>
+    );
   }
 
-  if (name === "history") {
-    return <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M3 3v5h5M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>;
+  if (name === 'history') {
+    return (
+      <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M3 12a9 9 0 1 0 3-6.7L3 8"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3 3v5h5M12 7v5l3 2"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
   }
 
-  return <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3 12h4l2.2-5 4.1 10 2.2-5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>;
+  return (
+    <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 12h4l2.2-5 4.1 10 2.2-5H21"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function ConnectionPlugIcon() {
-  return <svg className={styles.connectionIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M7 2v4M17 2v4M5 6h14v4h-2v3a5 5 0 0 1-10 0v-3H5V6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M12 18v1a3 3 0 0 0 3 3h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="m13 9-2 2h2l-2 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>;
+  return (
+    <svg className={styles.connectionIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7 2v4M17 2v4M5 6h14v4h-2v3a5 5 0 0 1-10 0v-3H5V6Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 18v1a3 3 0 0 0 3 3h1"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="m13 9-2 2h2l-2 2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function DashboardHeader({
   status,
   demo = false,
-  activePage = "dashboard",
+  activePage = 'dashboard',
 }: {
   status?: LiveConnection;
   demo?: boolean;
-  activePage?: "dashboard" | "blocks";
+  activePage?: 'dashboard' | 'blocks';
 }) {
-  const [activeItem, setActiveItem] = useState<
-    "dashboard" | "history" | "blocks"
-  >(activePage === "blocks" ? "blocks" : "dashboard");
+  const [activeItem, setActiveItem] = useState<'dashboard' | 'history' | 'blocks'>(
+    activePage === 'blocks' ? 'blocks' : 'dashboard',
+  );
 
-  return <header className={styles.header}>
-    <div className={styles.logo}>
-      <Image
-        className={styles.brandLogo}
-        src="/alphractal-logo-dark.svg"
-        alt="Alphractal"
-        width={156}
-        height={40}
-        priority
-      />
-    </div>
-    <nav className={styles.nav}>
-      <Link className={activeItem === "dashboard" ? styles.active : ""} href="/" aria-current={activeItem === "dashboard" ? "page" : undefined} onClick={() => setActiveItem("dashboard")}><NavIcon name="dashboard" />Visão geral</Link>
-      <Link className={activeItem === "history" ? styles.active : ""} href="/#history" aria-current={activeItem === "history" ? "location" : undefined} onClick={() => setActiveItem("history")}><NavIcon name="history" />Histórico</Link>
-      <Link className={activeItem === "blocks" ? styles.active : ""} href="/blocos" aria-current={activeItem === "blocks" ? "page" : undefined} onClick={() => setActiveItem("blocks")}><NavIcon name="blocks" />Blocos</Link>
-    </nav>
-    <div className={styles.headerStatus}>
-      {demo && <span className={styles.demoBadge}>Demo</span>}
-      {status && (
-        <span className={`${styles.connection} ${connectionClasses[status]}`} role="status" aria-live="polite">
-          <ConnectionPlugIcon />
-          {connectionLabels[status]}
-        </span>
-      )}
-    </div>
-  </header>;
+  return (
+    <header className={styles.header}>
+      <div className={styles.logo}>
+        <Image
+          className={styles.brandLogo}
+          src="/alphractal-logo-dark.svg"
+          alt="Alphractal"
+          width={156}
+          height={40}
+          priority
+        />
+      </div>
+      <nav className={styles.nav}>
+        <Link
+          className={activeItem === 'dashboard' ? styles.active : ''}
+          href="/"
+          aria-current={activeItem === 'dashboard' ? 'page' : undefined}
+          onClick={() => setActiveItem('dashboard')}
+        >
+          <NavIcon name="dashboard" />
+          Visão geral
+        </Link>
+        <Link
+          className={activeItem === 'history' ? styles.active : ''}
+          href="/#history"
+          aria-current={activeItem === 'history' ? 'location' : undefined}
+          onClick={() => setActiveItem('history')}
+        >
+          <NavIcon name="history" />
+          Histórico
+        </Link>
+        <Link
+          className={activeItem === 'blocks' ? styles.active : ''}
+          href="/blocos"
+          aria-current={activeItem === 'blocks' ? 'page' : undefined}
+          onClick={() => setActiveItem('blocks')}
+        >
+          <NavIcon name="blocks" />
+          Blocos
+        </Link>
+      </nav>
+      <div className={styles.headerStatus}>
+        {demo && <span className={styles.demoBadge}>Demo</span>}
+        {status && (
+          <span
+            className={`${styles.connection} ${connectionClasses[status]}`}
+            role="status"
+            aria-live="polite"
+          >
+            <ConnectionPlugIcon />
+            {connectionLabels[status]}
+          </span>
+        )}
+      </div>
+    </header>
+  );
 }

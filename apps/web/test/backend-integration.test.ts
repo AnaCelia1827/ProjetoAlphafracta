@@ -1,13 +1,13 @@
 // @vitest-environment node
 
-import { afterEach, describe, expect, it } from "vitest";
-import { createApp } from "../../api/src/app.js";
-import { blockSummary, feeSnapshot } from "../../api/test/helpers/fixtures.js";
-import { fetchBlockHistory } from "@/lib/api/fetch-block-history";
-import { fetchCurrentFee } from "@/lib/api/fetch-current-fee";
-import { fetchRecentBlocks } from "@/lib/api/fetch-recent-blocks";
+import { afterEach, describe, expect, it } from 'vitest';
+import { createApp } from '../../api/src/app.js';
+import { blockSummary, feeSnapshot } from '../../api/test/helpers/fixtures.js';
+import { fetchBlockHistory } from '@/lib/api/fetch-block-history';
+import { fetchCurrentFee } from '@/lib/api/fetch-current-fee';
+import { fetchRecentBlocks } from '@/lib/api/fetch-recent-blocks';
 
-describe("web client against Express", () => {
+describe('web client against Express', () => {
   let close: (() => Promise<void>) | undefined;
 
   afterEach(async () => {
@@ -15,7 +15,7 @@ describe("web client against Express", () => {
     close = undefined;
   });
 
-  it("consumes the current fee and recent-block envelopes emitted by createApp", async () => {
+  it('consumes the current fee and recent-block envelopes emitted by createApp', async () => {
     const fee = feeSnapshot();
     const block = blockSummary(23548192n);
     const dependencies: NonNullable<Parameters<typeof createApp>[0]> = {
@@ -36,8 +36,8 @@ describe("web client against Express", () => {
         server.close((error) => (error ? reject(error) : resolve())),
       );
     const address = server.address();
-    if (address === null || typeof address === "string") {
-      throw new Error("Expected TCP server");
+    if (address === null || typeof address === 'string') {
+      throw new Error('Expected TCP server');
     }
     const origin = `http://127.0.0.1:${address.port}`;
 
@@ -56,7 +56,7 @@ describe("web client against Express", () => {
         url: `${origin}/api/v1/blocks/history`,
       }),
     ).resolves.toMatchObject({
-      blocks: [expect.objectContaining({ number: "23548192" })],
+      blocks: [expect.objectContaining({ number: '23548192' })],
       nextCursor: null,
     });
   });

@@ -153,7 +153,8 @@ export class UnavailableBlockRepository implements ObservedBlockRepository, Init
     throw new PersistenceUnavailableError();
   }
   /** Rejeita paginação persistida enquanto MongoDB não está configurado. */
-  async findPage(_query: BlockHistoryQuery): Promise<never> {
+  async findPage(query: BlockHistoryQuery): Promise<never> {
+    void query;
     throw new PersistenceUnavailableError();
   }
   /** Rejeita contexto persistido, resultando em classificação unavailable. */

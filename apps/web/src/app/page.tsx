@@ -1,40 +1,36 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { DashboardHeader } from "@/components/dashboard-header";
-import { DashboardFilters } from "@/components/dashboard-filters";
-import { FeeCard } from "@/components/fee-card";
-import { FeeHistoryChart } from "@/components/fee-history-chart";
-import { NetworkMomentCard } from "@/components/network-moment-card";
-import { RecentBlocks } from "@/components/recent-blocks";
-import { useBlockSearch } from "@/hooks/use-block-search";
-import { useDataAge } from "@/hooks/use-data-age";
-import { useFeeHistory } from "@/hooks/use-fee-history";
-import { useLiveMonitor } from "@/hooks/use-live-monitor";
-import { apiConfig } from "@/lib/api/config";
-import { classifyNetworkMoment } from "@/lib/fees/network-moment";
-import type { HistoryRangeMinutes } from "@/types/fees";
-import styles from "./page.module.css";
+import { useState } from 'react';
+import { DashboardHeader } from '@/components/dashboard-header';
+import { DashboardFilters } from '@/components/dashboard-filters';
+import { FeeCard } from '@/components/fee-card';
+import { FeeHistoryChart } from '@/components/fee-history-chart';
+import { NetworkMomentCard } from '@/components/network-moment-card';
+import { RecentBlocks } from '@/components/recent-blocks';
+import { useBlockSearch } from '@/hooks/use-block-search';
+import { useDataAge } from '@/hooks/use-data-age';
+import { useFeeHistory } from '@/hooks/use-fee-history';
+import { useLiveMonitor } from '@/hooks/use-live-monitor';
+import { apiConfig } from '@/lib/api/config';
+import { classifyNetworkMoment } from '@/lib/fees/network-moment';
+import type { HistoryRangeMinutes } from '@/types/fees';
+import styles from './page.module.css';
 
 export default function Home() {
-  const [rangeMinutes, setRangeMinutes] =
-    useState<HistoryRangeMinutes>(1440);
-  const [blockSearchValue, setBlockSearchValue] = useState("");
+  const [rangeMinutes, setRangeMinutes] = useState<HistoryRangeMinutes>(1440);
+  const [blockSearchValue, setBlockSearchValue] = useState('');
   const live = useLiveMonitor();
   const blockSearch = useBlockSearch();
   const { ageMs } = useDataAge(live.fee);
   const history = useFeeHistory(rangeMinutes);
-  const moment = classifyNetworkMoment(
-    live.fee?.maxCostUsd,
-    history.baseline24h,
-  );
+  const moment = classifyNetworkMoment(live.fee?.maxCostUsd, history.baseline24h);
 
   const searchBlock = (identifier: string) => {
     void blockSearch.search(identifier);
   };
 
   const backToLive = () => {
-    setBlockSearchValue("");
+    setBlockSearchValue('');
     blockSearch.backToLive();
   };
 

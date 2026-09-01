@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import styles from "@/app/page.module.css";
-import { Metric } from "@/components/metric";
-import type { FeeHistoryPoint, HistoryRangeMinutes } from "@/types/fees";
+import { useState } from 'react';
+import styles from '@/app/page.module.css';
+import { Metric } from '@/components/metric';
+import type { FeeHistoryPoint, HistoryRangeMinutes } from '@/types/fees';
 
 type Props = {
   history: FeeHistoryPoint[];
@@ -22,33 +22,33 @@ type PricedPoint = {
 };
 
 const RANGE_OPTIONS = [
-  [5, "5m"],
-  [15, "15m"],
-  [60, "1h"],
-  [360, "6h"],
-  [1440, "24h"],
+  [5, '5m'],
+  [15, '15m'],
+  [60, '1h'],
+  [360, '6h'],
+  [1440, '24h'],
 ] as const;
 
 const width = 1_000;
 const height = 260;
 
 function formatUsd(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'USD',
   }).format(value);
 }
 
 function formatTime(timestamp: string) {
-  return new Date(timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Date(timestamp).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
 function formatVariation(value: number | undefined) {
-  if (value === undefined) return "—";
-  return `${value > 0 ? "+" : ""}${formatUsd(value)}`;
+  if (value === undefined) return '—';
+  return `${value > 0 ? '+' : ''}${formatUsd(value)}`;
 }
 
 export function FeeHistoryChart({
@@ -61,11 +61,9 @@ export function FeeHistoryChart({
 }: Props) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const pricedHistory = history.filter(
-    (item): item is FeeHistoryPoint & { maxCostUsd: number } =>
-      item.maxCostUsd !== undefined,
+    (item): item is FeeHistoryPoint & { maxCostUsd: number } => item.maxCostUsd !== undefined,
   );
-  const maxValue =
-    Math.max(1, ...pricedHistory.map((item) => item.maxCostUsd)) * 1.1;
+  const maxValue = Math.max(1, ...pricedHistory.map((item) => item.maxCostUsd)) * 1.1;
   const denominator = Math.max(1, history.length - 1);
   const pricedPoints: PricedPoint[] = history.flatMap((item, historyIndex) => {
     if (item.maxCostUsd === undefined) return [];
@@ -80,10 +78,7 @@ export function FeeHistoryChart({
   });
   const segments = pricedPoints.reduce<PricedPoint[][]>((groups, point) => {
     const currentSegment = groups.at(-1);
-    if (
-      !currentSegment ||
-      point.historyIndex !== currentSegment.at(-1)!.historyIndex + 1
-    ) {
+    if (!currentSegment || point.historyIndex !== currentSegment.at(-1)!.historyIndex + 1) {
       groups.push([point]);
     } else {
       currentSegment.push(point);
@@ -95,19 +90,14 @@ export function FeeHistoryChart({
     ? Math.max(...pricedHistory.map((item) => item.maxCostUsd))
     : undefined;
   const average = pricedHistory.length
-    ? pricedHistory.reduce((total, item) => total + item.maxCostUsd, 0) /
-      pricedHistory.length
+    ? pricedHistory.reduce((total, item) => total + item.maxCostUsd, 0) / pricedHistory.length
     : undefined;
   const current = history.at(-1)?.maxCostUsd;
   const previous = history.at(-2)?.maxCostUsd;
   const currentVariation =
-    current === undefined || previous === undefined
-      ? undefined
-      : current - previous;
+    current === undefined || previous === undefined ? undefined : current - previous;
   const activeIndex =
-    hoveredIndex === null
-      ? null
-      : Math.min(hoveredIndex, pricedPoints.length - 1);
+    hoveredIndex === null ? null : Math.min(hoveredIndex, pricedPoints.length - 1);
   const activePoint = activeIndex === null ? null : pricedPoints[activeIndex];
   const activePrevious = activePoint
     ? history[activePoint.historyIndex - 1]?.maxCostUsd
@@ -121,13 +111,10 @@ export function FeeHistoryChart({
   const selectClosestPoint = (clientX: number, element: HTMLDivElement) => {
     if (pricedPoints.length === 0) return;
     const bounds = element.getBoundingClientRect();
-    const x =
-      Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width)) * width;
+    const x = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width)) * width;
     const closestIndex = pricedPoints.reduce(
       (best, point, index) =>
-        Math.abs(point.x - x) < Math.abs(pricedPoints[best]!.x - x)
-          ? index
-          : best,
+        Math.abs(point.x - x) < Math.abs(pricedPoints[best]!.x - x) ? index : best,
       0,
     );
     setHoveredIndex(closestIndex);
@@ -146,9 +133,7 @@ export function FeeHistoryChart({
               key={minutes}
               type="button"
               aria-pressed={rangeMinutes === minutes}
-              className={
-                rangeMinutes === minutes ? styles.rangeActive : undefined
-              }
+              className={rangeMinutes === minutes ? styles.rangeActive : undefined}
               onClick={() => onRangeChange(minutes)}
             >
               {label}
@@ -178,32 +163,20 @@ export function FeeHistoryChart({
               className={styles.graphPlot}
               tabIndex={0}
               aria-label="Gráfico interativo do custo em USD. Use o mouse ou as setas para consultar os valores."
-              onPointerEnter={(event) =>
-                selectClosestPoint(event.clientX, event.currentTarget)
-              }
-              onPointerMove={(event) =>
-                selectClosestPoint(event.clientX, event.currentTarget)
-              }
+              onPointerEnter={(event) => selectClosestPoint(event.clientX, event.currentTarget)}
+              onPointerMove={(event) => selectClosestPoint(event.clientX, event.currentTarget)}
               onPointerLeave={() => setHoveredIndex(null)}
-              onFocus={() =>
-                setHoveredIndex((value) => value ?? pricedPoints.length - 1)
-              }
+              onFocus={() => setHoveredIndex((value) => value ?? pricedPoints.length - 1)}
               onBlur={() => setHoveredIndex(null)}
               onKeyDown={(event) => {
-                if (event.key === "Escape") setHoveredIndex(null);
-                if (
-                  event.key === "ArrowLeft" ||
-                  event.key === "ArrowRight"
-                ) {
+                if (event.key === 'Escape') setHoveredIndex(null);
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
                   event.preventDefault();
-                  const direction = event.key === "ArrowLeft" ? -1 : 1;
+                  const direction = event.key === 'ArrowLeft' ? -1 : 1;
                   setHoveredIndex((value) =>
                     Math.min(
                       pricedPoints.length - 1,
-                      Math.max(
-                        0,
-                        (value ?? pricedPoints.length - 1) + direction,
-                      ),
+                      Math.max(0, (value ?? pricedPoints.length - 1) + direction),
                     ),
                   );
                 }
@@ -217,16 +190,8 @@ export function FeeHistoryChart({
               >
                 <defs>
                   <linearGradient id="usdArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="0"
-                      stopColor="var(--color-primary-hover)"
-                      stopOpacity=".38"
-                    />
-                    <stop
-                      offset="1"
-                      stopColor="var(--color-primary-deep)"
-                      stopOpacity="0"
-                    />
+                    <stop offset="0" stopColor="var(--color-primary-hover)" stopOpacity=".38" />
+                    <stop offset="1" stopColor="var(--color-primary-deep)" stopOpacity="0" />
                   </linearGradient>
                   <linearGradient id="usdLine" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0" stopColor="var(--color-primary)" />
@@ -235,9 +200,7 @@ export function FeeHistoryChart({
                   </linearGradient>
                 </defs>
                 {drawableSegments.map((segment) => {
-                  const points = segment
-                    .map(({ x, y }) => `${x},${y}`)
-                    .join(" ");
+                  const points = segment.map(({ x, y }) => `${x},${y}`).join(' ');
                   const first = segment[0]!;
                   const last = segment.at(-1)!;
                   return (
@@ -297,7 +260,7 @@ export function FeeHistoryChart({
               </svg>
               {activePoint && (
                 <div
-                  className={`${styles.chartValueTooltip} ${activeIndex === 0 ? styles.chartValueTooltipStart : ""} ${activeIndex === pricedPoints.length - 1 ? styles.chartValueTooltipEnd : ""}`}
+                  className={`${styles.chartValueTooltip} ${activeIndex === 0 ? styles.chartValueTooltipStart : ''} ${activeIndex === pricedPoints.length - 1 ? styles.chartValueTooltipEnd : ''}`}
                   role="status"
                   style={{
                     left: `${(activePoint.x / width) * 100}%`,
@@ -306,17 +269,15 @@ export function FeeHistoryChart({
                 >
                   <strong>{formatUsd(activePoint.item.maxCostUsd)}</strong>
                   <small>
-                    {activePoint.item.recommendedMaxFeeGwei.toLocaleString(
-                      "pt-BR",
-                      { maximumFractionDigits: 2 },
-                    )} Gwei
+                    {activePoint.item.recommendedMaxFeeGwei.toLocaleString('pt-BR', {
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    Gwei
                   </small>
                   {activeVariation !== undefined && (
                     <span
                       className={
-                        activeVariation >= 0
-                          ? styles.positiveVariation
-                          : styles.negativeVariation
+                        activeVariation >= 0 ? styles.positiveVariation : styles.negativeVariation
                       }
                     >
                       {formatVariation(activeVariation)}
@@ -334,24 +295,13 @@ export function FeeHistoryChart({
               ))}
           </div>
           <div className={styles.historyStats}>
-            <Metric
-              label="MÁXIMA NO PERÍODO"
-              value={maximum}
-              suffix="USD"
-            />
-            <Metric
-              label="MÉDIA NO PERÍODO"
-              value={average}
-              suffix="USD"
-            />
+            <Metric label="MÁXIMA NO PERÍODO" value={maximum} suffix="USD" />
+            <Metric label="MÉDIA NO PERÍODO" value={average} suffix="USD" />
             <Metric
               label="CUSTO ATUAL"
               value={current === undefined ? undefined : formatUsd(current)}
             />
-            <Metric
-              label="VARIAÇÃO RECENTE"
-              value={formatVariation(currentVariation)}
-            />
+            <Metric label="VARIAÇÃO RECENTE" value={formatVariation(currentVariation)} />
           </div>
         </>
       )}

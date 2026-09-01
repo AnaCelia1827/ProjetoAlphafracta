@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchBlockHistory } from "@/lib/api/fetch-block-history";
-import type { BlockViewModel } from "@/types/blocks";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchBlockHistory } from '@/lib/api/fetch-block-history';
+import type { BlockViewModel } from '@/types/blocks';
 
 const PAGE_SIZE = 10;
 
@@ -25,9 +25,7 @@ export type BlockCatalogState = {
 };
 
 function errorMessage(reason: unknown) {
-  return reason instanceof Error
-    ? reason.message
-    : "Não foi possível carregar o catálogo.";
+  return reason instanceof Error ? reason.message : 'Não foi possível carregar o catálogo.';
 }
 
 export function useBlockCatalog(): BlockCatalogState {
