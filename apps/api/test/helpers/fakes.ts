@@ -51,6 +51,7 @@ export class FakeFeeSnapshotRepository implements FeeSnapshotRepository {
 export class FakeObservedBlockRepository implements ObservedBlockRepository {
   recent: BlockSummary[] = [];
   context: BlockSummary[] = [];
+  page: BlockHistoryPage = { data: [], nextCursor: null };
   available = true;
   error: Error | null = null;
   readonly saved: BlockSummary[] = [];
@@ -80,6 +81,12 @@ export class FakeObservedBlockRepository implements ObservedBlockRepository {
     return this.recent.slice(0, limit);
   }
 
+  /** Retorna página preparada ou reproduz indisponibilidade de persistência. */
+  async findPage(_query: BlockHistoryQuery): Promise<BlockHistoryPage> {
+    if (this.error !== null) throw this.error;
+    return this.page;
+  }
+
   /** Registra intervalo consultado e devolve o contexto histórico configurado. */
   async findCanonicalBefore(timestamp: Date, from: Date): Promise<BlockSummary[]> {
     if (this.error !== null) throw this.error;
@@ -98,5 +105,10 @@ export class FakeObservedBlockRepository implements ObservedBlockRepository {
     return this.available;
   }
 }
-import type { BlockSummary, FinalityChange } from '../../src/domain/blocks/models.js';
+import type {
+  BlockHistoryPage,
+  BlockHistoryQuery,
+  BlockSummary,
+  FinalityChange,
+} from '../../src/domain/blocks/models.js';
 import type { ObservedBlockRepository } from '../../src/domain/blocks/ports.js';

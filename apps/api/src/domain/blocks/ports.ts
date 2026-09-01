@@ -1,4 +1,6 @@
 import type {
+  BlockHistoryPage,
+  BlockHistoryQuery,
   BlockIdentifier,
   BlockSummary,
   FinalityChange,
@@ -29,6 +31,7 @@ export interface ObservedBlockRepository {
     exceptHash: BlockHash,
   ): Promise<void>;
   findRecent(limit: number): Promise<BlockSummary[]>;
+  findPage(query: BlockHistoryQuery): Promise<BlockHistoryPage>;
   findCanonicalBefore(timestamp: Date, from: Date): Promise<BlockSummary[]>;
   updateFinality(changes: FinalityChange[]): Promise<void>;
   isAvailable(): boolean;

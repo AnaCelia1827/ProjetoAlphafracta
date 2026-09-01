@@ -17,6 +17,7 @@ import {
   GetBlockByIdentifier,
   parseBlockIdentifier,
 } from '../../src/application/blocks/get-block-by-identifier.js';
+import { GetBlockHistory } from '../../src/application/blocks/get-block-history.js';
 import { GetRecentBlocks } from '../../src/application/blocks/get-recent-blocks.js';
 import { ObserveBlock } from '../../src/application/blocks/observe-block.js';
 import { PrimeRecentBlocks } from '../../src/application/blocks/prime-recent-blocks.js';
@@ -152,6 +153,22 @@ describe('recent block bootstrap and reads', () => {
       20_000_001n,
       20_000_000n,
     ]);
+  });
+});
+
+describe('block history', () => {
+  it('returns a repository page and maps persistence failure', async () => {
+    const context = setup();
+    context.repository.page = {
+      data: [blockSummary(20_000_010n)],
+      nextCursor: 'next-page',
+    };
+    const history = new GetBlockHistory(context.repository);
+
+    await expect(history.execute({ limit: 10 })).resolves.toEqual(context.repository.page);
+
+    context.repository.error = new PersistenceUnavailableError();
+    await expect(history.execute({ limit: 10 })).rejects.toBeInstanceOf(BlocksUnavailableError);
   });
 });
 

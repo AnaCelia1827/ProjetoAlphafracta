@@ -16,7 +16,12 @@ import type {
 } from '../../src/domain/blocks/models.js';
 import { FeeHistoryUnavailableError } from '../../src/domain/fees/fee-trend.js';
 import type { AppConfig } from '../../src/config/env.js';
-import { createRuntime, redactConnectionUrl, type RuntimeAdapters } from '../../src/runtime.js';
+import {
+  createRuntime,
+  redactConnectionUrl,
+  UnavailableBlockRepository,
+  type RuntimeAdapters,
+} from '../../src/runtime.js';
 import { FakeFeeSnapshotRepository, FakeObservedBlockRepository } from '../helpers/fakes.js';
 import { FIXED_NOW, normalizedBlock, pendingBid } from '../helpers/fixtures.js';
 
@@ -125,6 +130,14 @@ afterEach(() => {
 });
 
 describe('runtime resilience', () => {
+  it('rejects block history when MongoDB is not configured', async () => {
+    const repository = new UnavailableBlockRepository();
+
+    await expect(repository.findPage({ limit: 10 })).rejects.toBeInstanceOf(
+      PersistenceUnavailableError,
+    );
+  });
+
   it('redacts credentials, paths and query strings from configured URLs', () => {
     expect(redactConnectionUrl(config.ALCHEMY_HTTP_URL)).toBe(
       'https://alchemy.example.test/[redacted]',

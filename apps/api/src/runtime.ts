@@ -16,7 +16,7 @@ import { GetCurrentFeeSnapshot } from './application/fees/get-current-fee-snapsh
 import { GetFeeHistory } from './application/fees/get-fee-history.js';
 import { createApp } from './app.js';
 import type { AppConfig } from './config/env.js';
-import type { FinalityHead } from './domain/blocks/models.js';
+import type { BlockHistoryQuery, FinalityHead } from './domain/blocks/models.js';
 import type { EthereumBlockSource, ObservedBlockRepository } from './domain/blocks/ports.js';
 import { RecentBlockWindow } from './domain/blocks/recent-block-window.js';
 import { FeeHistoryUnavailableError } from './domain/fees/fee-trend.js';
@@ -136,7 +136,7 @@ class UnavailableFeeRepository implements FeeSnapshotRepository, Initializable {
 }
 
 /** Fallback de blocos que mantém a janela em memória quando MongoDB não existe. */
-class UnavailableBlockRepository implements ObservedBlockRepository, Initializable {
+export class UnavailableBlockRepository implements ObservedBlockRepository, Initializable {
   /** Não prepara estado porque nenhuma coleção está disponível neste fallback. */
   async initialize(): Promise<void> {}
   /** Rejeita escrita canônica para o caso de uso continuar de forma degradada. */
@@ -149,6 +149,10 @@ class UnavailableBlockRepository implements ObservedBlockRepository, Initializab
   }
   /** Rejeita recuperação inicial persistida de blocos. */
   async findRecent(): Promise<never[]> {
+    throw new PersistenceUnavailableError();
+  }
+  /** Rejeita paginação persistida enquanto MongoDB não está configurado. */
+  async findPage(_query: BlockHistoryQuery): Promise<never> {
     throw new PersistenceUnavailableError();
   }
   /** Rejeita contexto persistido, resultando em classificação unavailable. */
