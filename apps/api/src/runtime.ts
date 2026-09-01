@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import pino from 'pino';
 
 import { GetBlockByIdentifier } from './application/blocks/get-block-by-identifier.js';
+import { GetBlockHistory } from './application/blocks/get-block-history.js';
 import { GetRecentBlocks } from './application/blocks/get-recent-blocks.js';
 import { ObserveBlock } from './application/blocks/observe-block.js';
 import { PrimeRecentBlocks } from './application/blocks/prime-recent-blocks.js';
@@ -295,6 +296,7 @@ export function createRuntime(
     getCurrentFeeSnapshot,
     getFeeHistory,
     getRecentBlocks: new GetRecentBlocks(recentBlocks),
+    getBlockHistory: new GetBlockHistory(adapters.blockRepository),
     getBlockByIdentifier: new GetBlockByIdentifier({
       repository: adapters.blockRepository,
       source: adapters.blockSource,

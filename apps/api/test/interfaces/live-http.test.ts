@@ -1,5 +1,6 @@
 import {
   ApiErrorSchema,
+  BlockHistoryResponseSchema,
   BlockResponseSchema,
   FeeCurrentResponseSchema,
   FeeHistoryResponseSchema,
@@ -32,6 +33,12 @@ function dependencies(): ApiDependencies {
       execute: vi.fn(async () => ({ data: [feeSnapshot()], nextCursor: 'next-page' })),
     },
     getRecentBlocks: { execute: vi.fn(async () => [blockSummary(20_000_001n)]) },
+    getBlockHistory: {
+      execute: vi.fn(async () => ({
+        data: [blockSummary(20_000_001n)],
+        nextCursor: 'next-block-page',
+      })),
+    },
     getBlockByIdentifier: { execute: vi.fn(async () => blockSummary(20_000_000n)) },
     liveSseHub: { handle: vi.fn((_request, response) => response.status(200).end()) },
   };
@@ -102,6 +109,24 @@ describe('live monitor REST API', () => {
     });
     expect(searched.status).toBe(200);
     expect(BlockResponseSchema.parse(searched.body).data.number).toBe('20000000');
+  });
+
+  it('validates and serializes block-history pagination', async () => {
+    const input = dependencies();
+    const response = await request(createApp(input))
+      .get('/api/v1/blocks/history')
+      .query({ limit: '10' });
+
+    expect(response.status).toBe(200);
+    expect(BlockHistoryResponseSchema.parse(response.body).page).toEqual({
+      nextCursor: 'next-block-page',
+      hasMore: true,
+    });
+    expect(input.getBlockHistory.execute).toHaveBeenCalledWith({ limit: 10 });
+
+    const invalid = await request(createApp(input)).get('/api/v1/blocks/history?limit=51');
+    expect(invalid.status).toBe(400);
+    expect(ApiErrorSchema.parse(invalid.body).error.code).toBe('INVALID_QUERY');
   });
 
   it('rejects a malformed block identifier before calling the use case', async () => {

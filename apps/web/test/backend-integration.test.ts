@@ -24,6 +24,7 @@ describe("web client against Express", () => {
         execute: async () => ({ data: [fee], nextCursor: null }),
       },
       getRecentBlocks: { execute: async () => [block] },
+      getBlockHistory: { execute: async () => ({ data: [block], nextCursor: null }) },
       getBlockByIdentifier: { execute: async () => block },
       liveSseHub: { handle: (_request, response) => response.end() },
     };

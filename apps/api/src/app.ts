@@ -4,7 +4,11 @@ import helmet from 'helmet';
 import pino from 'pino';
 import { pinoHttp } from 'pino-http';
 
-import type { BlockByIdentifierQuery, RecentBlocksQuery } from './interfaces/http/block-routes.js';
+import type {
+  BlockByIdentifierQuery,
+  BlockHistoryQueryUseCase,
+  RecentBlocksQuery,
+} from './interfaces/http/block-routes.js';
 import { createBlockRouter } from './interfaces/http/block-routes.js';
 import { errorMiddleware, routeNotFoundMiddleware } from './interfaces/http/error-middleware.js';
 import type {
@@ -27,6 +31,7 @@ export interface ApiDependencies {
   getCurrentFeeSnapshot: CurrentFeeSnapshotQuery;
   getFeeHistory: FeeHistoryQueryUseCase;
   getRecentBlocks: RecentBlocksQuery;
+  getBlockHistory: BlockHistoryQueryUseCase;
   getBlockByIdentifier: BlockByIdentifierQuery;
   liveSseHub: { handle(request: Request, response: Response): void };
 }
