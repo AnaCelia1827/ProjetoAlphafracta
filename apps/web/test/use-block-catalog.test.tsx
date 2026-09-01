@@ -48,6 +48,14 @@ describe("useBlockCatalog", () => {
     expect(result.current.pageNumber).toBe(1);
     expect(fetchBlockHistoryMock).toHaveBeenCalledTimes(2);
 
+    await act(() => result.current.next());
+    expect(result.current.pageNumber).toBe(2);
+    expect(result.current.blocks).toEqual(secondBlocks);
+    expect(fetchBlockHistoryMock).toHaveBeenCalledTimes(2);
+
+    act(() => result.current.previous());
+    expect(result.current.pageNumber).toBe(1);
+
     fetchBlockHistoryMock.mockRejectedValueOnce(
       new Error("catalog unavailable"),
     );
@@ -55,5 +63,35 @@ describe("useBlockCatalog", () => {
     expect(result.current.pageNumber).toBe(1);
     expect(result.current.blocks).toEqual(firstBlocks);
     expect(result.current.error).toBe("catalog unavailable");
+  });
+
+  it("aborts the currently active page request on unmount", async () => {
+    let resolveNext!: (page: {
+      blocks: typeof secondBlocks;
+      nextCursor: null;
+    }) => void;
+    fetchBlockHistoryMock
+      .mockResolvedValueOnce({ blocks: firstBlocks, nextCursor: "page-2" })
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveNext = resolve;
+        }),
+      );
+
+    const { result, unmount } = renderHook(() => useBlockCatalog());
+    await waitFor(() => expect(result.current.blocks).toEqual(firstBlocks));
+
+    let nextRequest!: Promise<void>;
+    act(() => {
+      nextRequest = result.current.next();
+    });
+    await waitFor(() => expect(fetchBlockHistoryMock).toHaveBeenCalledTimes(2));
+    const activeSignal = fetchBlockHistoryMock.mock.calls[1]?.[0].signal;
+
+    unmount();
+
+    expect(activeSignal?.aborted).toBe(true);
+    resolveNext({ blocks: secondBlocks, nextCursor: null });
+    await nextRequest;
   });
 });

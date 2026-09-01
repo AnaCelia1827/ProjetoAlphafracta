@@ -70,29 +70,11 @@ export function BlockCatalogView({
     visibleBlocks.find((block) => block.hash === selectedHash) ??
     visibleBlocks[0];
 
-  if (loading && visibleBlocks.length === 0 && !searchedBlock) {
-    return (
-      <section className={`${styles.panel} ${styles.catalogState}`}>
-        <p role="status">Carregando catálogo…</p>
-      </section>
-    );
-  }
-
-  if (visibleBlocks.length === 0 && !searchedBlock) {
-    return (
-      <section className={`${styles.panel} ${styles.catalogState}`}>
-        <p role={error ? "alert" : undefined}>
-          {error ?? "Nenhum bloco encontrado."}
-        </p>
-        <button type="button" onClick={() => void onRefresh()}>
-          Tentar novamente
-        </button>
-      </section>
-    );
-  }
-
   return (
-    <section className={styles.catalogGrid} aria-busy={loading || searching}>
+    <section
+      className={`${styles.catalogGrid} ${selected ? "" : styles.catalogGridSingle}`}
+      aria-busy={loading || searching}
+    >
       <aside className={styles.catalogList} aria-label="Catálogo de blocos">
         <div className={styles.catalogListHeader}>
           <div>
@@ -130,6 +112,13 @@ export function BlockCatalogView({
         )}
 
         <div className={styles.catalogRows}>
+          {visibleBlocks.length === 0 && !searchedBlock && (
+            <div className={styles.catalogEmpty}>
+              <p role={loading ? "status" : undefined}>
+                {loading ? "Carregando catálogo…" : "Nenhum bloco encontrado."}
+              </p>
+            </div>
+          )}
           {visibleBlocks.map((block) => {
             const isSelected =
               !searchedBlock && block.hash === selected?.hash;
@@ -189,11 +178,11 @@ export function BlockCatalogView({
           </header>
           <dl className={styles.catalogMetrics}>
             <div>
-              <dt>Base Fee</dt>
+              <dt>Taxa-base</dt>
               <dd>{selected.baseFeeGwei.toLocaleString("pt-BR")} Gwei</dd>
             </div>
             <div>
-              <dt>Priority Fee</dt>
+              <dt>Taxa de prioridade</dt>
               <dd>{selected.priorityFeeGwei.toLocaleString("pt-BR")} Gwei</dd>
             </div>
             <div>
@@ -250,7 +239,7 @@ export function BlockCatalog() {
       <main className={`${styles.page} ${styles.catalogPage}`}>
         <header className={styles.catalogHero}>
           <div>
-            <span>Ethereum mainnet</span>
+            <span>Rede principal Ethereum</span>
             <h1>Catálogo de blocos</h1>
             <p>Consulte o histórico em páginas sequenciais de dez blocos.</p>
           </div>

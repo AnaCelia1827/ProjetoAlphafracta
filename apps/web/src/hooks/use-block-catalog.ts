@@ -32,30 +32,36 @@ function errorMessage(reason: unknown) {
 
 export function useBlockCatalog(): BlockCatalogState {
   const controllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
   const [pages, setPages] = useState<CatalogPage[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    mountedRef.current = true;
     const controller = new AbortController();
     controllerRef.current = controller;
 
     void fetchBlockHistory({ limit: PAGE_SIZE, signal: controller.signal })
       .then((page) => {
-        if (controller.signal.aborted) return;
+        if (!mountedRef.current || controller.signal.aborted) return;
         setPages([page]);
         setError(null);
       })
       .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
+        if (!mountedRef.current || controller.signal.aborted) return;
         setError(errorMessage(reason));
       })
       .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (mountedRef.current && !controller.signal.aborted) setLoading(false);
       });
 
-    return () => controller.abort();
+    return () => {
+      mountedRef.current = false;
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+    };
   }, []);
 
   const next = useCallback(async () => {
@@ -81,13 +87,15 @@ export function useBlockCatalog(): BlockCatalogState {
         cursor,
         signal: controller.signal,
       });
-      if (controller.signal.aborted) return;
+      if (!mountedRef.current || controller.signal.aborted) return;
       setPages((current) => [...current.slice(0, pageIndex + 1), page]);
       setPageIndex(pageIndex + 1);
     } catch (reason) {
-      if (!controller.signal.aborted) setError(errorMessage(reason));
+      if (mountedRef.current && !controller.signal.aborted) {
+        setError(errorMessage(reason));
+      }
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (mountedRef.current && !controller.signal.aborted) setLoading(false);
     }
   }, [loading, pageIndex, pages]);
 
@@ -108,13 +116,15 @@ export function useBlockCatalog(): BlockCatalogState {
         limit: PAGE_SIZE,
         signal: controller.signal,
       });
-      if (controller.signal.aborted) return;
+      if (!mountedRef.current || controller.signal.aborted) return;
       setPages([page]);
       setPageIndex(0);
     } catch (reason) {
-      if (!controller.signal.aborted) setError(errorMessage(reason));
+      if (mountedRef.current && !controller.signal.aborted) {
+        setError(errorMessage(reason));
+      }
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (mountedRef.current && !controller.signal.aborted) setLoading(false);
     }
   }, []);
 
