@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import styles from '@/app/page.module.css';
 import { Metric } from '@/components/metric';
+import { calculateUsdChartDomain } from '@/lib/fees/usd-chart-domain';
 import type { FeeHistoryPoint, HistoryRangeMinutes } from '@/types/fees';
 
 type Props = {
@@ -63,7 +64,8 @@ export function FeeHistoryChart({
   const pricedHistory = history.filter(
     (item): item is FeeHistoryPoint & { maxCostUsd: number } => item.maxCostUsd !== undefined,
   );
-  const maxValue = Math.max(1, ...pricedHistory.map((item) => item.maxCostUsd)) * 1.1;
+  const chartDomain = calculateUsdChartDomain(history);
+  const scaleDenominator = chartDomain?.scaleDenominator ?? 1;
   const denominator = Math.max(1, history.length - 1);
   const pricedPoints: PricedPoint[] = history.flatMap((item, historyIndex) => {
     if (item.maxCostUsd === undefined) return [];
@@ -72,7 +74,7 @@ export function FeeHistoryChart({
         item: item as FeeHistoryPoint & { maxCostUsd: number },
         historyIndex,
         x: (historyIndex / denominator) * width,
-        y: height - (item.maxCostUsd / maxValue) * height,
+        y: height - (item.maxCostUsd / scaleDenominator) * height,
       },
     ];
   });
@@ -155,8 +157,8 @@ export function FeeHistoryChart({
           {error && <p className={styles.inlineError}>{error}</p>}
           <div className={styles.graph}>
             <div className={styles.yAxis}>
-              <span>{formatUsd(maxValue)}</span>
-              <span>{formatUsd(maxValue / 2)}</span>
+              <span>{formatUsd(chartDomain?.ceiling ?? 0)}</span>
+              <span>{formatUsd(chartDomain?.midpoint ?? 0)}</span>
               <span>{formatUsd(0)}</span>
             </div>
             <div

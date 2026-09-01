@@ -154,4 +154,39 @@ describe('FeeHistoryChart', () => {
     fireEvent.focus(screen.getByLabelText(/gráfico interativo do custo em USD/i));
     expect(screen.getByRole('status')).not.toHaveTextContent(/\+US\$\s*0,40/);
   });
+
+  it('renders a proportional sub-dollar y-axis without the old fixed ceiling', () => {
+    const { container } = render(
+      <FeeHistoryChart
+        {...baseProps}
+        history={[
+          {
+            timestamp: '2026-09-01T03:00:00.000Z',
+            recommendedMaxFeeGwei: 4,
+            recommendedPriorityFeeGwei: 1,
+            maxCostUsd: 0.1,
+          },
+          {
+            timestamp: '2026-09-01T03:01:00.000Z',
+            recommendedMaxFeeGwei: 8,
+            recommendedPriorityFeeGwei: 1.2,
+          },
+          {
+            timestamp: '2026-09-01T03:02:00.000Z',
+            recommendedMaxFeeGwei: 7,
+            recommendedPriorityFeeGwei: 1.1,
+            maxCostUsd: 0.2,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/US\$\s*0,22/)).toBeVisible();
+    expect(screen.getByText(/US\$\s*0,11/)).toBeVisible();
+    expect(screen.getByText(/US\$\s*0,00/)).toBeVisible();
+    expect(screen.queryByText(/US\$\s*1,10/)).not.toBeInTheDocument();
+
+    const pricedCircles = container.querySelectorAll('svg circle');
+    expect(Number(pricedCircles[1]?.getAttribute('cy'))).toBeCloseTo(260 / 11);
+  });
 });
