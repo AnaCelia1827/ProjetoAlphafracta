@@ -98,6 +98,16 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:8
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -113,6 +123,8 @@ jobs:
           npm run test --workspace @alphractal/contracts -- --pool=forks --poolOptions.forks.maxForks=2
       - name: Validate API
         if: needs.changes.outputs.api == 'true'
+        env:
+          TEST_MONGODB_URI: mongodb://127.0.0.1:27017
         run: |
           npm run lint --workspace @alphractal/api
           npm run typecheck --workspace @alphractal/api
