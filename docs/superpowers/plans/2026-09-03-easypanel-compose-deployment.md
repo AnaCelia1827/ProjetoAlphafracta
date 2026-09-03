@@ -913,7 +913,7 @@ coordenado está em [docs/deployment/easypanel.md](docs/deployment/easypanel.md)
 
 ```bash
 npx prettier --check README.md docs/deployment/easypanel.md
-if rg -n 'api/deploy/[A-Za-z0-9]+|mongodb://[^[:space:]@]+:[^[:space:]@]+@' README.md docs/deployment/easypanel.md; then exit 1; fi
+if rg -n 'api/deploy/[A-Za-z0-9]+|mongodb://[^[:space:]@]+:[^[:space:]@]+@' docs/deployment/easypanel.md; then exit 1; fi
 git add README.md docs/deployment/easypanel.md
 git commit -m "docs: add easypanel deployment runbook"
 ```

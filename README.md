@@ -64,6 +64,9 @@ O repositório é um monorepo npm organizado como um monólito modular:
 | `packages/contracts` | Schemas Zod e tipos compartilhados entre backend e frontend |
 | MongoDB | Histórico opcional de snapshots e blocos observados |
 
+O procedimento de publicação das imagens, criação do MongoDB nativo e deploy
+coordenado está em [docs/deployment/easypanel.md](docs/deployment/easypanel.md).
+
 Na API, as regras são separadas em quatro áreas:
 
 - `domain`: cálculos e regras puras de taxas e blocos;
