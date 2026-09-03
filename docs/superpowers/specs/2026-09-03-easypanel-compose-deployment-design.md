@@ -105,7 +105,8 @@ O GitHub armazenará:
 
 - `GHCR_NAMESPACE`, `API_SERVER_URL` e `EASYPANEL_DEPLOY_ENABLED` como
   variables;
-- `EASYPANEL_COMPOSE_DEPLOY_HOOK` como secret.
+- `EASYPANEL_COMPOSE_DEPLOY_HOOK` como repository secret, sem dependência de
+  GitHub Environments.
 
 Os packages `alphractal-api` e `alphractal-web` serão públicos no GHCR, assim
 como o código-fonte do projeto. Isso permite ao serviço Compose fazer pull

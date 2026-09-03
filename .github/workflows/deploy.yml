@@ -239,7 +239,6 @@ jobs:
        needs.changes.outputs.web == 'true' ||
        needs.changes.outputs.stack == 'true')
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Trigger one EasyPanel Compose deployment
         env:

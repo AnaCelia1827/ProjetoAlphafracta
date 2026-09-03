@@ -20,9 +20,8 @@ Em **Settings > Secrets and variables > Actions > Variables**, crie:
 - `API_SERVER_URL=http://api:3001`;
 - `EASYPANEL_DEPLOY_ENABLED=false`.
 
-Crie também o environment `production`, mas ainda não cadastre o hook. O
-primeiro workflow deve testar e publicar as imagens sem tentar acessar um
-Compose que ainda não existe.
+Ainda não cadastre o hook. O primeiro workflow deve testar e publicar as
+imagens sem tentar acessar um Compose que ainda não existe.
 
 Depois que a implementação entrar em `main`, abra a execução **Build and deploy
 Compose**. Confirme que `build-api`, `build-web` e `promote` passaram e que
@@ -104,8 +103,8 @@ Compose. Não exponha uma porta da API para contornar falhas de rede interna.
 Depois do deploy manual:
 
 1. copie a **Deployment Trigger URL** do serviço Compose;
-2. salve-a como secret `EASYPANEL_COMPOSE_DEPLOY_HOOK` no environment GitHub
-   `production`;
+2. em **Settings > Secrets and variables > Actions > Secrets**, salve-a como
+   repository secret `EASYPANEL_COMPOSE_DEPLOY_HOOK`;
 3. altere a repository variable `EASYPANEL_DEPLOY_ENABLED` para `true`;
 4. abra **Actions > Build and deploy Compose > Run workflow** e selecione
    `main`;
