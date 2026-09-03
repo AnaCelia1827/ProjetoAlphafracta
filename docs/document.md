@@ -1,12 +1,13 @@
+## Matriz SWOT
+swot-analysis-tool-xxl-sub-use-case
+A análise SWOT é uma das principais metodologias de negócios usadas por grandes empresas para embasar a tomada de decisões estratégicas. Em um mundo que se atualiza constantemente, as empresas precisam saber analisar e focar esforços nos fatores internos e externos que impactam seu negócio.
+
 <div align="center">
 
-![Matriz SWOT](../swot-alph.png)
-
-*Fonte: Autoria própia*
+![Matriz SWOT](./swot-alph.png)
+*Fonte: Inteli Blockchain*
 
 </div>
-
-## Matriz SWOT
 
 ### Forças
 
