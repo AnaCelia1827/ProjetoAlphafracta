@@ -558,6 +558,7 @@ permissions:
 
 jobs:
   changes:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.selection.outputs.api }}
@@ -865,8 +866,8 @@ Adicione um domínio HTTPS para o serviço interno `web`, protocolo HTTP, porta
 
 Após o primeiro deploy manual, copie a Deployment Trigger URL do Compose para o
 secret `EASYPANEL_COMPOSE_DEPLOY_HOOK` do GitHub environment `production`.
-Altere `EASYPANEL_DEPLOY_ENABLED=true` e execute o workflow manualmente. Ele
-deve publicar as duas imagens e chamar o hook uma vez.
+Altere `EASYPANEL_DEPLOY_ENABLED=true` e execute o workflow manualmente na
+branch `main`. Ele deve publicar as duas imagens e chamar o hook uma vez.
 
 ## Deploy cotidiano
 
@@ -1040,7 +1041,9 @@ Press `Deploy` once. Expected: API becomes healthy, web starts, and the public r
 
 - [ ] **Step 8: Enable and test automatic deployment**
 
-Save the Compose hook as `EASYPANEL_COMPOSE_DEPLOY_HOOK` in GitHub environment `production`; set `EASYPANEL_DEPLOY_ENABLED=true`; run `workflow_dispatch`.
+Save the Compose hook as `EASYPANEL_COMPOSE_DEPLOY_HOOK` in GitHub environment
+`production`; set `EASYPANEL_DEPLOY_ENABLED=true`; run `workflow_dispatch` on
+`main`.
 
 Expected: both image jobs reuse their own caches, their immutable tags are
 promoted to `main`, and EasyPanel records exactly one Compose deploy.

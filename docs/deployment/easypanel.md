@@ -107,7 +107,8 @@ Depois do deploy manual:
 2. salve-a como secret `EASYPANEL_COMPOSE_DEPLOY_HOOK` no environment GitHub
    `production`;
 3. altere a repository variable `EASYPANEL_DEPLOY_ENABLED` para `true`;
-4. abra **Actions > Build and deploy Compose > Run workflow**;
+4. abra **Actions > Build and deploy Compose > Run workflow** e selecione
+   `main`;
 5. confirme que as duas imagens reutilizam seus caches e que o EasyPanel
    registra exatamente um deploy do Compose.
 

@@ -29,6 +29,7 @@ permissions:
 
 jobs:
   changes:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.selection.outputs.api }}
