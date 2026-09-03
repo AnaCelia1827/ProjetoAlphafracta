@@ -103,18 +103,22 @@ EasyPanel nunca serão Docker build arguments.
 
 O GitHub armazenará:
 
-- `GHCR_NAMESPACE` e `API_SERVER_URL` como variables;
+- `GHCR_NAMESPACE`, `API_SERVER_URL` e `EASYPANEL_DEPLOY_ENABLED` como
+  variables;
 - `EASYPANEL_COMPOSE_DEPLOY_HOOK` como secret.
 
-Se as imagens forem privadas, o EasyPanel armazenará também um usuário GitHub e
-um personal access token com permissão mínima `read:packages`. O token de
-publicação continuará sendo o `GITHUB_TOKEN` efêmero do workflow.
+Os packages `alphractal-api` e `alphractal-web` serão públicos no GHCR, assim
+como o código-fonte do projeto. Isso permite ao serviço Compose fazer pull
+anônimo sem depender de uma configuração de credenciais de registry que não é
+documentada pelo EasyPanel para esse tipo de serviço. O token de publicação
+continuará sendo o `GITHUB_TOKEN` efêmero do workflow; nenhum PAT de packages
+será armazenado na VPS.
 
 ## Detecção de mudanças
 
 O workflow iniciará para mudanças em código de aplicação, contratos
 compartilhados, manifests, Dockerfiles, Compose ou no próprio workflow. Uma
-etapa inicial classificará o conjunto alterado em `api` e `web`.
+etapa inicial classificará o conjunto alterado em `api`, `web` e `stack`.
 
 As regras serão:
 
@@ -127,7 +131,8 @@ As regras serão:
 | `tsconfig.base.json` ou configuração global de qualidade | build | build |
 | `Dockerfile.api` | build | ignora |
 | `Dockerfile.web` | ignora | build |
-| `.dockerignore`, Compose ou workflow | build | build |
+| `.dockerignore` ou workflow | build | build |
+| somente Compose | ignora | ignora; aplica a stack |
 | somente documentação sem impacto operacional | ignora | ignora |
 
 `workflow_dispatch` permitirá rebuild manual dos dois artefatos. Um push que
@@ -158,15 +163,25 @@ Em um push elegível na `main`, o workflow:
 2. instala dependências com cache npm;
 3. executa lint, typecheck e testes focados nos workspaces afetados, limitando o
    Vitest a no máximo dois forks;
-4. constrói e publica apenas as imagens afetadas, reutilizando o cache BuildKit;
-5. aguarda todos os builds selecionados terminarem com sucesso;
-6. chama uma única vez `EASYPANEL_COMPOSE_DEPLOY_HOOK`;
+4. constrói e publica apenas as tags SHA das imagens afetadas, reutilizando o
+   cache BuildKit;
+5. aguarda todos os builds selecionados terminarem com sucesso e somente então
+   promove as tags SHA afetadas para `main`;
+6. quando `EASYPANEL_DEPLOY_ENABLED=true`, chama uma única vez
+   `EASYPANEL_COMPOSE_DEPLOY_HOOK`;
 7. o EasyPanel aplica `docker compose up --build -d` e, por causa de
    `pull_policy: always`, consulta as imagens atuais no GHCR.
 
 O grupo de concorrência será único para o Compose e cancelará um deploy antigo
 quando um commit mais recente chegar antes de sua conclusão. O hook nunca será
 chamado quando validação ou publicação falhar.
+
+No primeiro rollout, `EASYPANEL_DEPLOY_ENABLED=false` permitirá publicar as
+imagens antes de existir um hook. Os dois packages serão então marcados como
+públicos e validados por pull anônimo. Depois que o Compose for criado no
+EasyPanel, o hook será salvo, a variável passará para `true` e um
+`workflow_dispatch` validará o fluxo completo. Essa chave não desabilita builds
+nem publicação; controla somente o acionamento externo.
 
 ## Comportamento operacional
 
@@ -183,7 +198,8 @@ separadas, precedidas por backup verificado.
 ## Falhas e rollback
 
 - Falha de lint, tipo, teste ou build interrompe o workflow antes do deploy.
-- Falha ao publicar uma das imagens impede o acionamento do Compose.
+- Falha ao publicar uma das imagens impede a promoção para `main` e o
+  acionamento do Compose.
 - Falha no hook preserva as imagens publicadas e permite repetir somente o
   deploy manualmente.
 - Falha de inicialização aparece nos logs do serviço interno correspondente.
