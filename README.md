@@ -57,12 +57,15 @@ Coinbase WebSocket ─────┘                         │
 
 O repositório é um monorepo npm organizado como um monólito modular:
 
-| Parte | Responsabilidade |
-| --- | --- |
-| `apps/web` | Dashboard Next.js e integração same-origin com a API |
-| `apps/api` | API Express, monitoramento, regras de domínio e adaptadores externos |
-| `packages/contracts` | Schemas Zod e tipos compartilhados entre backend e frontend |
-| MongoDB | Histórico opcional de snapshots e blocos observados |
+| Parte                | Responsabilidade                                                     |
+| -------------------- | -------------------------------------------------------------------- |
+| `apps/web`           | Dashboard Next.js e integração same-origin com a API                 |
+| `apps/api`           | API Express, monitoramento, regras de domínio e adaptadores externos |
+| `packages/contracts` | Schemas Zod e tipos compartilhados entre backend e frontend          |
+| MongoDB              | Histórico opcional de snapshots e blocos observados                  |
+
+O procedimento de publicação das imagens, criação do MongoDB nativo e deploy
+coordenado está em [docs/deployment/easypanel.md](docs/deployment/easypanel.md).
 
 Na API, as regras são separadas em quatro áreas:
 
@@ -246,12 +249,12 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Endereços locais
 
-| Serviço | Endereço padrão |
-| --- | --- |
-| Dashboard | [http://localhost:3000](http://localhost:3000) |
-| API | `http://localhost:3001` |
+| Serviço      | Endereço padrão                                              |
+| ------------ | ------------------------------------------------------------ |
+| Dashboard    | [http://localhost:3000](http://localhost:3000)               |
+| API          | `http://localhost:3001`                                      |
 | Health check | [http://localhost:3001/health](http://localhost:3001/health) |
-| MongoDB | `mongodb://localhost:27017` |
+| MongoDB      | `mongodb://localhost:27017`                                  |
 
 O frontend encaminha `/api/v1/*` para o endereço definido em
 `API_SERVER_URL`. Se mudar `PORT` no backend, atualize essa variável no
@@ -261,14 +264,14 @@ frontend e reinicie os dois processos.
 
 ### REST
 
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| `GET` | `/health` | Verifica se o processo da API está respondendo |
-| `GET` | `/api/v1/fees/current` | Retorna o snapshot atual de taxas |
-| `GET` | `/api/v1/fees/history` | Consulta o histórico por intervalo de tempo |
-| `GET` | `/api/v1/blocks/recent` | Retorna a janela de blocos recentes |
-| `GET` | `/api/v1/blocks/history` | Retorna o catálogo paginado de blocos observados |
-| `GET` | `/api/v1/blocks/:numberOrHash` | Pesquisa um bloco por número ou hash |
+| Método | Rota                           | Descrição                                        |
+| ------ | ------------------------------ | ------------------------------------------------ |
+| `GET`  | `/health`                      | Verifica se o processo da API está respondendo   |
+| `GET`  | `/api/v1/fees/current`         | Retorna o snapshot atual de taxas                |
+| `GET`  | `/api/v1/fees/history`         | Consulta o histórico por intervalo de tempo      |
+| `GET`  | `/api/v1/blocks/recent`        | Retorna a janela de blocos recentes              |
+| `GET`  | `/api/v1/blocks/history`       | Retorna o catálogo paginado de blocos observados |
+| `GET`  | `/api/v1/blocks/:numberOrHash` | Pesquisa um bloco por número ou hash             |
 
 O histórico de taxas aceita `from`, `to`, `limit` e `cursor`. O catálogo de
 blocos aceita `limit` e `cursor`. Datas são enviadas no formato ISO 8601.
@@ -288,14 +291,14 @@ REST, pois o MVP não mantém replay dos eventos perdidos.
 
 Execute os comandos na raiz do monorepo:
 
-| Comando | Finalidade |
-| --- | --- |
-| `npm run dev:api` | Inicia a API em modo de desenvolvimento |
-| `npm run dev:web` | Inicia o frontend em modo de desenvolvimento |
-| `npm run typecheck` | Verifica os tipos de todos os workspaces |
-| `npm run lint` | Executa o ESLint em todos os workspaces |
-| `npm run format:check` | Confere a formatação com Prettier |
-| `npm run build` | Gera os builds disponíveis nos workspaces |
+| Comando                | Finalidade                                   |
+| ---------------------- | -------------------------------------------- |
+| `npm run dev:api`      | Inicia a API em modo de desenvolvimento      |
+| `npm run dev:web`      | Inicia o frontend em modo de desenvolvimento |
+| `npm run typecheck`    | Verifica os tipos de todos os workspaces     |
+| `npm run lint`         | Executa o ESLint em todos os workspaces      |
+| `npm run format:check` | Confere a formatação com Prettier            |
+| `npm run build`        | Gera os builds disponíveis nos workspaces    |
 
 Para evitar consumo excessivo de memória, execute as suítes de teste uma por
 vez e limite o Vitest a dois forks:

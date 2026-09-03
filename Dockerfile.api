@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1.7
+FROM node:24-bookworm-slim AS deps
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+FROM deps AS builder
+COPY tsconfig.base.json ./
+COPY apps/api apps/api
+COPY packages/contracts packages/contracts
+RUN npm run build --workspace @alphractal/api
+
+FROM node:24-bookworm-slim AS prod-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev --workspace @alphractal/api --include-workspace-root=false
+
+FROM node:24-bookworm-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3001
+RUN groupadd --system --gid 1001 nodejs \
+    && useradd --system --uid 1001 --gid nodejs --home-dir /app api
+COPY --from=prod-deps --chown=api:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=api:nodejs /workspace/apps/api/dist ./apps/api/dist
+COPY --chown=api:nodejs apps/api/package.json ./apps/api/package.json
+COPY --chown=api:nodejs packages/contracts/package.json ./packages/contracts/package.json
+USER api
+WORKDIR /app/apps/api
+EXPOSE 3001
+CMD ["node", "dist/server.js"]

@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
+    "build": "tsup",
+    "start": "node dist/server.js",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint src test"
+    "lint": "eslint src test tsup.config.ts"
   },
   "dependencies": {
     "@alphractal/contracts": "file:../../packages/contracts",
@@ -29,6 +30,7 @@
     "@types/supertest": "^6.0.3",
     "@types/ws": "^8.18.1",
     "supertest": "^7.2.2",
+    "tsup": "^8.5.1",
     "tsx": "^4.23.12",
     "vitest": "^3.2.7"
   }

@@ -1,0 +1,248 @@
+name: Build and deploy Compose
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'packages/contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - '.dockerignore'
+      - 'Dockerfile.api'
+      - 'Dockerfile.web'
+      - 'docker-compose.production.yml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-compose-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.selection.outputs.api }}
+      web: ${{ steps.selection.outputs.web }}
+      stack: ${{ steps.selection.outputs.stack }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect changed areas
+        if: github.event_name != 'workflow_dispatch'
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/contracts/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.base.json'
+              - 'eslint.config.js'
+              - '.prettierrc.json'
+              - '.prettierignore'
+              - '.dockerignore'
+              - 'Dockerfile.api'
+              - '.github/workflows/deploy.yml'
+            web:
+              - 'apps/web/**'
+              - 'packages/contracts/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.base.json'
+              - 'eslint.config.js'
+              - '.prettierrc.json'
+              - '.prettierignore'
+              - '.dockerignore'
+              - 'Dockerfile.web'
+              - '.github/workflows/deploy.yml'
+            stack:
+              - 'docker-compose.production.yml'
+
+      - name: Select jobs
+        id: selection
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          API_CHANGED: ${{ steps.filter.outputs.api }}
+          WEB_CHANGED: ${{ steps.filter.outputs.web }}
+          STACK_CHANGED: ${{ steps.filter.outputs.stack }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            {
+              echo "api=true"
+              echo "web=true"
+              echo "stack=true"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "api=${API_CHANGED:-false}"
+              echo "web=${WEB_CHANGED:-false}"
+              echo "stack=${STACK_CHANGED:-false}"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Validate contracts
+        run: |
+          npm run lint --workspace @alphractal/contracts
+          npm run typecheck --workspace @alphractal/contracts
+          npm run test --workspace @alphractal/contracts -- --pool=forks --poolOptions.forks.maxForks=2
+      - name: Validate API
+        if: needs.changes.outputs.api == 'true'
+        run: |
+          npm run lint --workspace @alphractal/api
+          npm run typecheck --workspace @alphractal/api
+          npm run test --workspace @alphractal/api -- --pool=forks --poolOptions.forks.maxForks=2
+          npm run build --workspace @alphractal/api
+      - name: Validate API-to-web contract
+        if: needs.changes.outputs.api == 'true' && needs.changes.outputs.web != 'true'
+        run: npm run test --workspace web -- test/backend-integration.test.ts --pool=forks --poolOptions.forks.maxForks=2
+      - name: Validate web
+        if: needs.changes.outputs.web == 'true'
+        env:
+          API_SERVER_URL: ${{ vars.API_SERVER_URL }}
+        run: |
+          npm run lint --workspace web
+          npm run typecheck --workspace web
+          npm run test --workspace web -- --pool=forks --poolOptions.forks.maxForks=2
+          npm run build --workspace web
+
+  build-api:
+    needs: [changes, verify]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ vars.GHCR_NAMESPACE }}/alphractal-api
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile.api
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=alphractal-api
+          cache-to: type=gha,mode=max,scope=alphractal-api
+
+  build-web:
+    needs: [changes, verify]
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ vars.GHCR_NAMESPACE }}/alphractal-web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile.web
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            API_SERVER_URL=${{ vars.API_SERVER_URL }}
+          tags: ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=alphractal-web
+          cache-to: type=gha,mode=max,scope=alphractal-web
+
+  promote:
+    needs: [changes, verify, build-api, build-web]
+    if: >-
+      always() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') &&
+      needs.verify.result == 'success' &&
+      (needs.changes.outputs.api != 'true' || needs.build-api.result == 'success') &&
+      (needs.changes.outputs.web != 'true' || needs.build-web.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      API_IMAGE: ghcr.io/${{ vars.GHCR_NAMESPACE }}/alphractal-api
+      WEB_IMAGE: ghcr.io/${{ vars.GHCR_NAMESPACE }}/alphractal-web
+      API_CHANGED: ${{ needs.changes.outputs.api }}
+      WEB_CHANGED: ${{ needs.changes.outputs.web }}
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote successful images to main
+        run: |
+          if [ "$API_CHANGED" = "true" ]; then
+            docker buildx imagetools create \
+              --tag "$API_IMAGE:main" "$API_IMAGE:sha-$GITHUB_SHA"
+          fi
+          if [ "$WEB_CHANGED" = "true" ]; then
+            docker buildx imagetools create \
+              --tag "$WEB_IMAGE:main" "$WEB_IMAGE:sha-$GITHUB_SHA"
+          fi
+
+  deploy:
+    needs: [changes, verify, build-api, build-web, promote]
+    if: >-
+      always() &&
+      vars.EASYPANEL_DEPLOY_ENABLED == 'true' &&
+      needs.changes.result == 'success' &&
+      (needs.verify.result == 'success' || needs.verify.result == 'skipped') &&
+      (needs.build-api.result == 'success' || needs.build-api.result == 'skipped') &&
+      (needs.build-web.result == 'success' || needs.build-web.result == 'skipped') &&
+      (((needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true') &&
+        needs.promote.result == 'success') ||
+       (needs.changes.outputs.api != 'true' && needs.changes.outputs.web != 'true' &&
+        needs.promote.result == 'skipped')) &&
+      (needs.changes.outputs.api == 'true' ||
+       needs.changes.outputs.web == 'true' ||
+       needs.changes.outputs.stack == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger one EasyPanel Compose deployment
+        env:
+          DEPLOY_HOOK: ${{ secrets.EASYPANEL_COMPOSE_DEPLOY_HOOK }}
+        run: |
+          test -n "$DEPLOY_HOOK"
+          curl --fail --silent --show-error "$DEPLOY_HOOK" >/dev/null
