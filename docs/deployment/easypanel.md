@@ -84,8 +84,7 @@ PROVIDER_REQUEST_TIMEOUT_MS=10000
 Substitua os valores descritivos somente no EasyPanel. Em `CORS_ORIGINS`, use
 a origem HTTPS exata, sem caminho e sem barra final.
 
-Adicione um domínio HTTPS para o serviço interno `web`, protocolo HTTP, porta
-3000. Não crie domínio ou porta publicada para `api` ou MongoDB.
+Adicione um domínio HTTPS para o serviço interno `web`, protocolo HTTP, porta 3000. Não crie domínio ou porta publicada para `api` ou MongoDB.
 
 ## 5. Fazer o primeiro deploy manual
 
@@ -117,13 +116,13 @@ rotacione-o e atualize o secret imediatamente.
 
 ## Deploy cotidiano
 
-| Mudança | Resultado |
-| --- | --- |
-| Somente API | testa e publica API; aplica o Compose |
-| Somente web | testa e publica web; aplica o Compose |
+| Mudança              | Resultado                               |
+| -------------------- | --------------------------------------- |
+| Somente API          | testa e publica API; aplica o Compose   |
+| Somente web          | testa e publica web; aplica o Compose   |
 | `packages/contracts` | testa e publica ambos; aplica o Compose |
-| Somente Compose | não publica imagem; aplica o Compose |
-| Somente documentação | não inicia o workflow |
+| Somente Compose      | não publica imagem; aplica o Compose    |
+| Somente documentação | não inicia o workflow                   |
 
 Cada imagem é publicada primeiro como `sha-<commit>`. Apenas depois de todos os
 builds selecionados passarem, o workflow promove essas imagens para `main` e
