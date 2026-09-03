@@ -1,0 +1,49 @@
+name: alphractal
+
+services:
+  api:
+    image: ghcr.io/${GHCR_NAMESPACE:?set GHCR_NAMESPACE}/alphractal-api:main
+    pull_policy: always
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      ALCHEMY_HTTP_URL: ${ALCHEMY_HTTP_URL:?set ALCHEMY_HTTP_URL}
+      ALCHEMY_WS_URL: ${ALCHEMY_WS_URL:?set ALCHEMY_WS_URL}
+      COINBASE_WS_URL: ${COINBASE_WS_URL:-wss://ws-feed.exchange.coinbase.com}
+      MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
+      FEE_INTERVAL_MS: ${FEE_INTERVAL_MS:-5000}
+      SSE_HEARTBEAT_MS: ${SSE_HEARTBEAT_MS:-15000}
+      PROVIDER_REQUEST_TIMEOUT_MS: ${PROVIDER_REQUEST_TIMEOUT_MS:-10000}
+    expose: ['3001']
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:3001/health')
+          .then((response) => process.exit(response.ok ? 0 : 1))
+          .catch(() => process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  web:
+    image: ghcr.io/${GHCR_NAMESPACE:?set GHCR_NAMESPACE}/alphractal-web:main
+    pull_policy: always
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      API_SERVER_URL: http://api:3001
+      NEXT_PUBLIC_USE_MOCK_DATA: 'false'
+    expose: ['3000']
+    depends_on:
+      api:
+        condition: service_healthy
